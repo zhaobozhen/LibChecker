@@ -205,14 +205,14 @@
   <string name="adv_show_64_bit">顯示 64 位元應用程式</string>
   <string name="adv_show_32_bit">顯示 32 位元應用程式</string>
   <string name="adv_sort_mode">排序模式</string>
-  <string name="adv_sort_by_time">升級時間</string>
+  <string name="adv_sort_by_time">更新時間</string>
   <string name="adv_sort_by_target_version">Target 版本</string>
   <string name="adv_sort_by_name">名稱</string>
   <string name="adv_show_android_version">顯示 Android 版本</string>
   <string name="adv_show_target_version">顯示 Target 版本</string>
   <string name="adv_show_min_version">顯示 Min 版本</string>
   <string name="adv_tint_abi_label">ABI 標籤染色</string>
-  <string name="adv_mark_exported">Mark Exported Component</string>
-  <string name="adv_mark_disabled">Mark Disabled Component</string>
-  <string name="adv_show_marked_lib">Show Marked Libraries</string>
+  <string name="adv_mark_exported">標示已匯出的元件</string>
+  <string name="adv_mark_disabled">標示已停用的元件</string>
+  <string name="adv_show_marked_lib">顯示已標示的庫</string>
 </resources>
