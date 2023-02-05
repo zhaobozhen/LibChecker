@@ -38,7 +38,6 @@
   <string name="ref_category_activity">活动</string>
   <string name="ref_category_br">广播接收器</string>
   <string name="ref_category_cp">内容提供器</string>
-  <string name="ref_category_dex">Dex</string>
   <string name="ref_category_perm">权限</string>
   <string name="ref_category_static">静态库</string>
   <string name="ref_category_metadata">元数据</string>
@@ -134,10 +133,6 @@
   <string name="signature_public_key_type">公钥类型</string>
   <string name="signature_algorithm_name">签名算法</string>
   <string name="signature_algorithm_oid">签名算法 OID</string>
-  <string name="signature_md5">MD5</string>
-  <string name="signature_sha1">SHA-1</string>
-  <string name="signature_sha256">SHA-256</string>
-  <string name="signature_char_string">CharString</string>
   <!--  Toast  -->
   <string name="toast_copied_to_clipboard">已复制到剪贴板</string>
   <string name="toast_not_existing_market">设备中不存在应用市场</string>
@@ -167,6 +162,7 @@
   <string name="dialog_title_keep_previous_snapshot">注意</string>
   <string name="dialog_message_keep_previous_snapshot">是否保留上一张快照？</string>
   <string name="dialog_title_select_to_delete">选择日期以删除快照</string>
+  <string name="dialog_title_confirm_to_delete">Are you sure to delete this snapshot?</string>
   <string name="btn_keep">保留</string>
   <string name="btn_drop">丢弃</string>
   <!--  Album  -->
