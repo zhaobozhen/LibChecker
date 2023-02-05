@@ -38,7 +38,6 @@
   <string name="ref_category_activity">Активити</string>
   <string name="ref_category_br">Широковещательные приемники</string>
   <string name="ref_category_cp">Поставщики контента</string>
-  <string name="ref_category_dex">Dex</string>
   <string name="ref_category_perm">Разрешения</string>
   <string name="ref_category_static">Нативные библиотеки</string>
   <string name="ref_category_metadata">Метаданные</string>
@@ -134,10 +133,6 @@
   <string name="signature_public_key_type">Public key Type</string>
   <string name="signature_algorithm_name">Signature Algorithm Name</string>
   <string name="signature_algorithm_oid">Signature Algorithm OID</string>
-  <string name="signature_md5">MD5</string>
-  <string name="signature_sha1">SHA-1</string>
-  <string name="signature_sha256">SHA-256</string>
-  <string name="signature_char_string">CharString</string>
   <!--  Toast  -->
   <string name="toast_copied_to_clipboard">Скопировано в буфер обмена</string>
   <string name="toast_not_existing_market">Нет магазина приложений</string>
@@ -167,6 +162,7 @@
   <string name="dialog_title_keep_previous_snapshot">Внимание</string>
   <string name="dialog_message_keep_previous_snapshot">Вы хотите сохранить предыдущий снимок?</string>
   <string name="dialog_title_select_to_delete">Выберите дату для удаления снимка</string>
+  <string name="dialog_title_confirm_to_delete">Are you sure to delete this snapshot?</string>
   <string name="btn_keep">Оставить</string>
   <string name="btn_drop">Удалить</string>
   <!--  Album  -->
