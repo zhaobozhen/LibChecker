@@ -182,6 +182,7 @@
   <string name="album_backup_summary">備份所有快照</string>
   <string name="album_restore">還原</string>
   <string name="album_restore_summary">從備份檔案還原快照</string>
+  <string name="album_restore_detail">%s : %s items in total\n</string>
   <string name="album_click_to_choose">按下以選擇</string>
   <string name="album_dialog_delete_snapshot_message">處理中…</string>
   <!--  Integration  -->
