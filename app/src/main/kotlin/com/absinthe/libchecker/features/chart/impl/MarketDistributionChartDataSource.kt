@@ -109,10 +109,7 @@ class MarketDistributionChartDataSource(items: List<LCItem>) : BaseVariableChart
         }
 
         val json = localFile.readText()
-        return@withContext json.fromJson<List<AndroidDistribution>>(
-          List::class.java,
-          AndroidDistribution::class.java
-        )
+        return@withContext json.fromJson<List<AndroidDistribution>>()
       }.onFailure {
         Timber.e(it)
       }.getOrNull()

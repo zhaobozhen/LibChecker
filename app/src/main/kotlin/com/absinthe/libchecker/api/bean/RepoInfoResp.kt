@@ -1,9 +1,9 @@
 package com.absinthe.libchecker.api.bean
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class RepoInfoResp(
-  @Json(name = "pushed_at") val pushedAt: String
+  @JsonNames("pushed_at") val pushedAt: String
 )

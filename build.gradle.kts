@@ -5,10 +5,10 @@ plugins {
   alias(libs.plugins.android.library) apply false
   alias(libs.plugins.kotlin.android) apply false
   alias(libs.plugins.kotlin.parcelize) apply false
+  alias(libs.plugins.kotlin.serialization.plugin) apply false
   alias(libs.plugins.protobuf) apply false
   alias(libs.plugins.hiddenApiRefine) apply false
   alias(libs.plugins.ksp) apply false
-  alias(libs.plugins.moshiX) apply false
   alias(libs.plugins.spotless) apply false
   id("build-logic") apply false
 }
@@ -29,7 +29,7 @@ allprojects {
   // See https://kotlinlang.org/docs/gradle-configure-project.html#gradle-java-toolchains-support
   plugins.withType<JavaBasePlugin>().configureEach {
     extensions.configure<JavaPluginExtension> {
-      toolchain.languageVersion = JavaLanguageVersion.of(17)
+      toolchain.languageVersion = JavaLanguageVersion.of(21)
     }
   }
 }

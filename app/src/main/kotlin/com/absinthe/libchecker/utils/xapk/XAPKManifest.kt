@@ -1,8 +1,8 @@
 package com.absinthe.libchecker.utils.xapk
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class XAPKManifest(
   val xapk_version: Int,
   val package_name: String,
@@ -12,7 +12,7 @@ data class XAPKManifest(
   val split_configs: List<String>,
   val split_apks: List<SplitConfig>
 ) {
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class SplitConfig(
     val file: String,
     val id: String

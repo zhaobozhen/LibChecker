@@ -1,13 +1,13 @@
 package com.absinthe.libchecker.integrations.monkeyking
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class ShareCmpInfo(
   val pkg: String,
   val components: List<Component>
 ) {
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class Component(
     val type: String,
     val name: String,

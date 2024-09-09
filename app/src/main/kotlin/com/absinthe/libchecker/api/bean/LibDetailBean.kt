@@ -1,19 +1,19 @@
 package com.absinthe.libchecker.api.bean
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class LibDetailBean(
   val data: List<Data>,
   val uuid: String
 ) {
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class Data(
     val locale: String,
     val data: DataBean
   )
 
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class DataBean(
     val label: String,
     val dev_team: String,

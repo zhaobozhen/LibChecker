@@ -26,10 +26,7 @@ class TimeNodeAdapter : BaseQuickAdapter<TimeStampItem, BaseViewHolder>(0) {
       name.text = getFormatDateString(item.timestamp)
       try {
         item.topApps?.let {
-          val list = it.fromJson<List<String>>(
-            List::class.java,
-            String::class.java
-          )
+          val list = it.fromJson<List<String>>()
           adapter.setList(list)
           if ((list?.size ?: 0) <= 5) {
             adapter.removeAllFooterView()

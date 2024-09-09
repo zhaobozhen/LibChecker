@@ -1,15 +1,16 @@
 package com.absinthe.libchecker.utils
 
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.intellij.lang.annotations.Language
 
 object JsonUtil {
   @PublishedApi
-  internal val moshi: Moshi = Moshi.Builder().build()
+  internal val json = Json { ignoreUnknownKeys = true } // Customize JSON configuration if needed
 
   inline fun <reified T> fromJson(@Language("JSON") string: String): T? = try {
-    moshi.adapter(T::class.java).fromJson(string)
+    json.decodeFromString<T>(string)
   } catch (e: Exception) {
     e.printStackTrace()
     null
@@ -17,10 +18,9 @@ object JsonUtil {
 
   inline fun <reified T> fromJson(
     @Language("JSON") string: String,
-    rawType: Class<*>,
-    vararg typeArguments: Class<*>
+    serializer: KSerializer<T>
   ): T? = try {
-    moshi.adapter<T>(Types.newParameterizedType(rawType, *typeArguments)).fromJson(string)
+    json.decodeFromString(serializer, string)
   } catch (e: Exception) {
     e.printStackTrace()
     null
@@ -28,7 +28,7 @@ object JsonUtil {
 
   @Language("JSON")
   inline fun <reified T> toJson(value: T?): String? = try {
-    moshi.adapter(T::class.java).toJson(value)
+    value?.let { json.encodeToString(it) }
   } catch (e: Exception) {
     e.printStackTrace()
     null
@@ -37,8 +37,8 @@ object JsonUtil {
 
 inline fun <reified T> String.fromJson(): T? = JsonUtil.fromJson(this)
 
-inline fun <reified T> String.fromJson(rawType: Class<*>, vararg typeArguments: Class<*>): T? =
-  JsonUtil.fromJson(this, rawType, *typeArguments)
+inline fun <reified T> String.fromJson(serializer: KSerializer<T>): T? = JsonUtil.fromJson(this, serializer)
 
 @Language("JSON")
 fun Any?.toJson(): String? = JsonUtil.toJson(this)
+

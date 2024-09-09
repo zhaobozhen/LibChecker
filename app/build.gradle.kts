@@ -4,15 +4,14 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.parcelize)
+  alias(libs.plugins.kotlin.serialization.plugin)
   alias(libs.plugins.protobuf)
   alias(libs.plugins.hiddenApiRefine)
   alias(libs.plugins.ksp)
-  alias(libs.plugins.moshiX)
   id("res-opt") apply false
 }
 
 ksp {
-  arg("moshi.generated", "javax.annotation.Generated")
   arg("room.generateKotlin", "true")
   arg("room.incremental", "true")
   arg("room.schemaLocation", "$projectDir/schemas")
@@ -83,6 +82,7 @@ dependencies {
   compileOnly(projects.hiddenApi)
 
   implementation(libs.kotlinX.coroutines)
+  implementation(libs.kotlinX.serialization.json)
   // implementation(libs.androidX.appCompat)
   implementation(libs.androidX.core)
   implementation(libs.androidX.activity)
@@ -101,8 +101,7 @@ dependencies {
   implementation(libs.square.okHttp)
   implementation(libs.square.okio)
   implementation(libs.square.retrofit)
-  implementation(libs.square.retrofit.moshi)
-  implementation(libs.square.moshi)
+  implementation(libs.square.retrofit.kotlinx)
   implementation(libs.google.protobuf.javaLite)
   implementation(libs.google.dexlib2)
   implementation(libs.rikka.refine.runtime)

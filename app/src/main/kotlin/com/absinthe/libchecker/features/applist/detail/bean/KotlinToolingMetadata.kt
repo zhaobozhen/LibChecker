@@ -1,8 +1,8 @@
 package com.absinthe.libchecker.features.applist.detail.bean
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class KotlinToolingMetadata(
   val buildSystem: String,
   val buildSystemVersion: String,
@@ -10,19 +10,19 @@ data class KotlinToolingMetadata(
   val buildPluginVersion: String,
   val projectTargets: Array<ProjectTarget>?
 ) {
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class ProjectTarget(
     val target: String,
     val platformType: String,
     val extras: Extras?
   )
 
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class Extras(
     val android: AndroidExtras?
   )
 
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class AndroidExtras(
     val sourceCompatibility: String?,
     val targetCompatibility: String?

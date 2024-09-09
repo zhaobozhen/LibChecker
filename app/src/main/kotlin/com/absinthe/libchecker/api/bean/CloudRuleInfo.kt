@@ -1,8 +1,8 @@
 package com.absinthe.libchecker.api.bean
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class CloudRuleInfo(
   val version: Int,
   val count: Int

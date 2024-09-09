@@ -1,9 +1,9 @@
 package com.absinthe.libchecker.features.snapshot.detail.bean
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable as KSerializable
 import java.io.Serializable
 
-@JsonClass(generateAdapter = true)
+@KSerializable
 data class SnapshotDiffItem(
   val packageName: String,
   val updateTime: Long,
@@ -30,7 +30,7 @@ data class SnapshotDiffItem(
   var deleted: Boolean = false,
   var isTrackItem: Boolean = false
 ) : Serializable {
-  @JsonClass(generateAdapter = true)
+  @KSerializable
   data class DiffNode<T>(val old: T, val new: T? = null) : Serializable
 
   fun isNothingChanged() = !added && !removed && !changed && !moved

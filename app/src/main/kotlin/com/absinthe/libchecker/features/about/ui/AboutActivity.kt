@@ -390,14 +390,6 @@ class AboutActivity :
       )
       add(
         License(
-          "Moshi",
-          "Square",
-          License.APACHE_2,
-          "https://github.com/square/moshi"
-        )
-      )
-      add(
-        License(
           "dexlib2",
           "Google",
           License.APACHE_2,

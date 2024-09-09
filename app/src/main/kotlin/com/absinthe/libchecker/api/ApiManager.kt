@@ -3,12 +3,13 @@ package com.absinthe.libchecker.api
 import com.absinthe.libchecker.api.request.VERSION
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
-import com.absinthe.libchecker.utils.JsonUtil
 import com.absinthe.libchecker.utils.extensions.unsafeLazy
 import java.util.concurrent.TimeUnit
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 private const val BRANCH_MASTER = "master"
 private const val WORKING_BRANCH = "v4"
@@ -47,7 +48,7 @@ object ApiManager {
       .addInterceptor(BaseUrlInterceptor())
       .build()
     Retrofit.Builder()
-      .addConverterFactory(MoshiConverterFactory.create(JsonUtil.moshi))
+      .addConverterFactory(Json.asConverterFactory("application/json; charset=UTF8".toMediaType()))
       .client(okHttpClient)
       .baseUrl(root)
       .build()

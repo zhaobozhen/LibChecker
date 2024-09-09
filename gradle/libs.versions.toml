@@ -16,9 +16,9 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 hiddenApiRefine = { id = "dev.rikka.tools.refine", version.ref = "hiddenApiRefine" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
+kotlin-serialization-plugin = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version = "2.0.20-1.0.25" }
 protobuf = { id = "com.google.protobuf", version = "0.9.4" }
-moshiX = "dev.zacsweers.moshix:0.28.0"
 spotless = "com.diffplug.spotless:6.25.0"
 
 [libraries]
@@ -26,6 +26,7 @@ gradlePlugin-android = { module = "com.android.tools.build:gradle", version.ref 
 gradlePlugin-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
 kotlinX-coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+kotlinX-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2"
 
 androidX-activity = "androidx.activity:activity-ktx:1.9.2"
 androidX-appCompat = "androidx.appcompat:appcompat:1.7.0"
@@ -45,11 +46,10 @@ androidX-viewPager2 = "androidx.viewpager2:viewpager2:1.1.0"
 androidX-window = "androidx.window:window:1.3.0"
 
 square-leakCanary = "com.squareup.leakcanary:leakcanary-android:2.14"
-square-moshi = "com.squareup.moshi:moshi:1.15.1"
 square-okHttp = "com.squareup.okhttp3:okhttp:4.12.0"
 square-okio = "com.squareup.okio:okio:3.9.0"
 square-retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "square-retrofit" }
-square-retrofit-moshi = { module = "com.squareup.retrofit2:converter-moshi", version.ref = "square-retrofit" }
+square-retrofit-kotlinx = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "square-retrofit" }
 
 google-dexlib2 = "com.android.tools.smali:smali-dexlib2:3.0.7"
 google-material = "com.google.android.material:material:1.12.0"

@@ -257,7 +257,7 @@ class SnapshotViewModel : ViewModel() {
           }
         } else {
           try {
-            snapshotDiffStoringItem.diffContent.fromJson<SnapshotDiffItem>()?.let { item ->
+            snapshotDiffStoringItem!!.diffContent.fromJson<SnapshotDiffItem>()?.let { item ->
               diffList.add(item)
             }
           } catch (e: IOException) {
@@ -777,14 +777,8 @@ class SnapshotViewModel : ViewModel() {
       list.addAll(
         getNativeDiffList(
           context,
-          entity.nativeLibsDiff.old.fromJson<List<LibStringItem>>(
-            List::class.java,
-            LibStringItem::class.java
-          ) ?: emptyList(),
-          entity.nativeLibsDiff.new?.fromJson<List<LibStringItem>>(
-            List::class.java,
-            LibStringItem::class.java
-          )
+          entity.nativeLibsDiff.old.fromJson<List<LibStringItem>>() ?: emptyList(),
+          entity.nativeLibsDiff.new?.fromJson<List<LibStringItem>>()
         )
       )
       addComponentDiffInfoFromJson(list, entity.servicesDiff, SERVICE)
@@ -794,27 +788,15 @@ class SnapshotViewModel : ViewModel() {
 
       list.addAll(
         getPermissionsDiffList(
-          entity.permissionsDiff.old.fromJson<List<String>>(
-            List::class.java,
-            String::class.java
-          ).orEmpty().toSet(),
-          entity.permissionsDiff.new?.fromJson<List<String>>(
-            List::class.java,
-            String::class.java
-          )?.toSet()
+          entity.permissionsDiff.old.fromJson<List<String>>().orEmpty().toSet(),
+          entity.permissionsDiff.new?.fromJson<List<String>>()?.toSet()
         )
       )
 
       list.addAll(
         getMetadataDiffList(
-          entity.metadataDiff.old.fromJson<List<LibStringItem>>(
-            List::class.java,
-            LibStringItem::class.java
-          ) ?: emptyList(),
-          entity.metadataDiff.new?.fromJson<List<LibStringItem>>(
-            List::class.java,
-            LibStringItem::class.java
-          )
+          entity.metadataDiff.old.fromJson<List<LibStringItem>>() ?: emptyList(),
+          entity.metadataDiff.new?.fromJson<List<LibStringItem>>()
         )
       )
 
@@ -826,10 +808,8 @@ class SnapshotViewModel : ViewModel() {
     diffNode: SnapshotDiffItem.DiffNode<String>,
     @LibType libType: Int
   ) {
-    val old =
-      diffNode.old.fromJson<List<String>>(List::class.java, String::class.java).orEmpty().toSet()
-    val new =
-      diffNode.new?.fromJson<List<String>>(List::class.java, String::class.java)?.toSet()
+    val old = diffNode.old.fromJson<List<String>>().orEmpty().toSet()
+    val new = diffNode.new?.fromJson<List<String>>()?.toSet()
     list.addAll(getComponentsDiffList(old, new, libType))
   }
 
@@ -1035,38 +1015,20 @@ class SnapshotViewModel : ViewModel() {
 
   private fun compareDiffIndicator(item: SnapshotDiffItem): CompareDiffNode {
     val native = compareNativeDiff(
-      item.nativeLibsDiff.old.fromJson<List<LibStringItem>>(
-        List::class.java,
-        LibStringItem::class.java
-      ) ?: emptyList(),
-      item.nativeLibsDiff.new?.fromJson<List<LibStringItem>>(
-        List::class.java,
-        LibStringItem::class.java
-      )
+      item.nativeLibsDiff.old.fromJson<List<LibStringItem>>() ?: emptyList(),
+      item.nativeLibsDiff.new?.fromJson<List<LibStringItem>>()
     )
     val services = compareComponentsDiff(item.servicesDiff)
     val activities = compareComponentsDiff(item.activitiesDiff)
     val receivers = compareComponentsDiff(item.receiversDiff)
     val providers = compareComponentsDiff(item.providersDiff)
     val permissions = comparePermissionsDiff(
-      item.permissionsDiff.old.fromJson<List<String>>(
-        List::class.java,
-        String::class.java
-      ).orEmpty().toSet(),
-      item.permissionsDiff.new?.fromJson<List<String>>(
-        List::class.java,
-        String::class.java
-      )?.toSet()
+      item.permissionsDiff.old.fromJson<List<String>>().orEmpty().toSet(),
+      item.permissionsDiff.new?.fromJson<List<String>>()?.toSet()
     )
     val metadata = compareMetadataDiff(
-      item.metadataDiff.old.fromJson<List<LibStringItem>>(
-        List::class.java,
-        LibStringItem::class.java
-      ) ?: emptyList(),
-      item.metadataDiff.new?.fromJson<List<LibStringItem>>(
-        List::class.java,
-        LibStringItem::class.java
-      )
+      item.metadataDiff.old.fromJson<List<LibStringItem>>() ?: emptyList(),
+      item.metadataDiff.new?.fromJson<List<LibStringItem>>()
     )
 
     val totalNode = CompareDiffNode().apply {
@@ -1123,14 +1085,8 @@ class SnapshotViewModel : ViewModel() {
       return CompareDiffNode(removed = true)
     }
 
-    val oldSet = diffNode.old.fromJson<List<String>>(
-      List::class.java,
-      String::class.java
-    ).orEmpty().toSet()
-    val newSet = diffNode.new.fromJson<List<String>>(
-      List::class.java,
-      String::class.java
-    ).orEmpty().toSet()
+    val oldSet = diffNode.old.fromJson<List<String>>().orEmpty().toSet()
+    val newSet = diffNode.new.fromJson<List<String>>().orEmpty().toSet()
 
     val removeList = (oldSet - newSet).toMutableSet()
     val addList = (newSet - oldSet).toMutableSet()

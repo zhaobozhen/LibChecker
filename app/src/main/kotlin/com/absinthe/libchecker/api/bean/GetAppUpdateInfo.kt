@@ -1,12 +1,12 @@
 package com.absinthe.libchecker.api.bean
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class GetAppUpdateInfo(
   val app: App
 ) {
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class App(
     val version: String,
     val versionCode: Int,
@@ -14,7 +14,7 @@ data class GetAppUpdateInfo(
     val link: String,
     val note: String?
   ) {
-    @JsonClass(generateAdapter = true)
+    @Serializable
     data class Extra(
       val target: Int,
       val min: Int,

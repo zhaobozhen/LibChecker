@@ -1,8 +1,8 @@
 package com.absinthe.libchecker.api.bean
 
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class AndroidDistribution(
   val name: String,
   val version: String,
@@ -11,6 +11,6 @@ data class AndroidDistribution(
   val url: String,
   val descriptionBlocks: List<DescriptionBlock>
 ) {
-  @JsonClass(generateAdapter = true)
+  @Serializable
   data class DescriptionBlock(val title: String, val body: String)
 }
