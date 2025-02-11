@@ -58,7 +58,7 @@ import com.absinthe.libchecker.data.app.LocalAppDataSource
 import com.absinthe.libchecker.features.applist.detail.bean.StatefulComponent
 import com.absinthe.libchecker.features.statistics.bean.LibStringItem
 import com.absinthe.libchecker.utils.dex.FastDexFileFactory
-import com.absinthe.libchecker.utils.elf.ELFParser
+import com.absinthe.libchecker.utils.elf.ELFParser2
 import com.absinthe.libchecker.utils.extensions.ABI_64_BIT
 import com.absinthe.libchecker.utils.extensions.ABI_STRING_MAP
 import com.absinthe.libchecker.utils.extensions.ABI_STRING_RES_MAP
@@ -79,6 +79,7 @@ import com.absinthe.libchecker.utils.extensions.toClassDefType
 import com.absinthe.libchecker.utils.extensions.toHexString
 import com.absinthe.libchecker.utils.manifest.StaticLibraryReader
 import com.android.tools.smali.dexlib2.Opcodes
+import com.getkeepsafe.relinker.elf.ElfParser
 import dev.rikka.tools.refine.Refine
 import java.io.File
 import java.io.InputStream
@@ -177,12 +178,12 @@ object PackageUtils {
             .filter { it.isFile }
             .distinctBy { it.name }
             .map {
-              val elfParser = runCatching { ELFParser(it.inputStream()) }.getOrNull()
+              val elfHeader = runCatching { ElfParser(it).parseHeader() }.getOrNull()
               LibStringItem(
                 name = it.name,
                 size = FileUtils.getFileSize(it),
                 elfType = elfParser?.getEType() ?: ET_NOT_ELF,
-                elfClass = elfParser?.getEClass() ?: ELFParser.EIdent.ELFCLASSNONE,
+                elfClass = elfParser?.getEClass() ?: ELFParser2.EIdent.ELFCLASSNONE,
                 pageSize = elfParser?.getPageSize() ?: PAGE_SIZE_4_KB
               )
             }
@@ -248,7 +249,7 @@ object PackageUtils {
               size = it.size,
               source = source,
               elfType = elfParser?.getEType() ?: ET_NOT_ELF,
-              elfClass = elfParser?.getEClass() ?: ELFParser.EIdent.ELFCLASSNONE,
+              elfClass = elfParser?.getEClass() ?: ELFParser2.EIdent.ELFCLASSNONE,
               pageSize = elfParser?.getPageSize() ?: PAGE_SIZE_4_KB
             )
           }
@@ -287,7 +288,7 @@ object PackageUtils {
                 size = entry.size,
                 process = if (fileName.startsWith("split_config")) null else fileName,
                 elfType = elfParser?.getEType() ?: ET_NOT_ELF,
-                elfClass = elfParser?.getEClass() ?: ELFParser.EIdent.ELFCLASSNONE,
+                elfClass = elfParser?.getEClass() ?: ELFParser2.EIdent.ELFCLASSNONE,
                 pageSize = elfParser?.getPageSize() ?: PAGE_SIZE_4_KB
               )
             )
@@ -801,7 +802,7 @@ object PackageUtils {
       "[${elfClassToString(item.elfClass)}]"
         .takeIf {
           item.elfType != ET_NOT_ELF &&
-            ((is64Bit && item.elfClass == ELFParser.EIdent.ELFCLASS32) || (!is64Bit && item.elfClass == ELFParser.EIdent.ELFCLASS64))
+            ((is64Bit && item.elfClass == ELFParser2.EIdent.ELFCLASS32) || (!is64Bit && item.elfClass == ELFParser2.EIdent.ELFCLASS64))
         }
         .orEmpty()
 
@@ -834,9 +835,9 @@ object PackageUtils {
    */
   private fun elfClassToString(elfClass: Int): String {
     return when (elfClass) {
-      ELFParser.EIdent.ELFCLASSNONE -> "ELFCLASSNONE"
-      ELFParser.EIdent.ELFCLASS32 -> "ELFCLASS32"
-      ELFParser.EIdent.ELFCLASS64 -> "ELFCLASS64"
+      ELFParser2.EIdent.ELFCLASSNONE -> "ELFCLASSNONE"
+      ELFParser2.EIdent.ELFCLASS32 -> "ELFCLASS32"
+      ELFParser2.EIdent.ELFCLASS64 -> "ELFCLASS64"
       else -> "Not Standard ELF"
     }
   }
@@ -957,8 +958,8 @@ object PackageUtils {
     }.getOrDefault(ET_NONE)
   }
 
-  private fun getElfParser(input: InputStream): ELFParser {
-    return ELFParser(input)
+  private fun getElfParser(input: InputStream): ELFParser2 {
+    return ELFParser2(input)
   }
 
   fun describeSignature(

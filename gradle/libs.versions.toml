@@ -96,6 +96,7 @@ zhaobozhen-axml = { module = "com.github.zhaobozhen.libraries:axml", version.ref
 zhaobozhen-me = { module = "com.github.zhaobozhen.libraries:me", version.ref = "zhaobozhen" }
 zhaobozhen-utils = { module = "com.github.zhaobozhen.libraries:utils", version.ref = "zhaobozhen" }
 ktlint = "com.pinterest.ktlint:ktlint-cli:1.5.0"
+relinker = "com.getkeepsafe.relinker:relinker:1.4.5"
 
 [bundles]
 androidX-lifecycle = [

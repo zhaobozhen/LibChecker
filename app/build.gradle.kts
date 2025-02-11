@@ -109,6 +109,7 @@ dependencies {
   implementation(libs.rikka.refine.runtime)
   implementation(libs.bundles.zhaobozhen)
   implementation(libs.lc.rules)
+  implementation(libs.relinker)
 
   ksp(libs.androidX.room.compiler)
 

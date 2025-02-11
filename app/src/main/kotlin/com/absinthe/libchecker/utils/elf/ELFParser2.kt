@@ -5,7 +5,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class ELFParser(inputStream: InputStream) {
+class ELFParser2(inputStream: InputStream) {
 
   lateinit var e_ident: EIdent
   var e_type: Short = 0
