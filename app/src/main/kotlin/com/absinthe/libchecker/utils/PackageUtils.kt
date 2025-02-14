@@ -158,13 +158,11 @@ object PackageUtils {
   /**
    * Get native libraries of an app
    * @param packageInfo PackageInfo
-   * @param needStaticLibrary True if need get static libraries
    * @param specifiedAbi Specify an ABI
    * @return List of LibStringItem
    */
   fun getNativeDirLibs(
     packageInfo: PackageInfo,
-    needStaticLibrary: Boolean = false,
     specifiedAbi: Int? = null
   ): List<LibStringItem> {
     val nativePath = packageInfo.applicationInfo?.nativeLibraryDir
@@ -198,23 +196,13 @@ object PackageUtils {
         abi = if (Process.is64Bit()) ARMV8 else ARMV7
       }
       val abiString = getAbiString(LibCheckerApp.app, abi, false)
+      val sourceDir = "lib/$abiString"
       list.addAll(
         getSourceLibs(
           packageInfo = packageInfo,
-          childDir = "lib/$abiString"
-        )
+          childDir = sourceDir
+        )[sourceDir] ?: emptyList()
       )
-    }
-    list.addAll(
-      getSourceLibs(
-        packageInfo = packageInfo,
-        childDir = "assets/",
-        source = "/assets"
-      )
-    )
-
-    if (needStaticLibrary) {
-      list.addAll(getStaticLibs(packageInfo))
     }
 
     return list.distinctBy { it.name }
@@ -225,39 +213,39 @@ object PackageUtils {
    * @param packageInfo PackageInfo
    * @return List of LibStringItem
    */
-  private fun getSourceLibs(
-    packageInfo: PackageInfo,
-    childDir: String,
-    source: String? = null
-  ): List<LibStringItem> {
-    val sourceDir = packageInfo.applicationInfo?.sourceDir ?: return emptyList()
+  fun getSourceLibs(packageInfo: PackageInfo, childDir: String?): Map<String, List<LibStringItem>> {
+    val sourceDir = packageInfo.applicationInfo?.sourceDir ?: return emptyMap()
     val file = File(sourceDir)
     if (file.exists().not()) {
-      return emptyList()
+      return emptyMap()
     }
-    return runCatching {
+    val map = mutableMapOf<String, List<LibStringItem>>()
+    runCatching {
       ZipFileCompat(file).use { zipFile ->
-        return zipFile.getZipEntries()
+        zipFile.getZipEntries()
           .asSequence()
-          .filter { (it.isDirectory.not() && it.name.startsWith(childDir)) && it.name.endsWith(".so") }
-          .distinctBy { it.name.split(File.separator).last() }
-          .map {
-            val elfParser = runCatching { getElfParser(zipFile.getInputStream(it)) }.getOrNull()
-            LibStringItem(
-              name = it.name.split(File.separator).last(),
-              size = it.size,
-              source = source,
-              elfType = elfParser?.getEType() ?: ET_NOT_ELF,
-              elfClass = elfParser?.getEClass() ?: ELFParser.EIdent.ELFCLASSNONE,
-              pageSize = elfParser?.getPageSize() ?: PAGE_SIZE_4_KB
-            )
+          .filter { it.isDirectory.not() && it.name.endsWith(".so") && (childDir == null || it.name.startsWith(childDir)) }
+          //.distinctBy { it.name.split(File.separator).last() }
+          .forEach { entry ->
+            childDirs.find { entry.name.startsWith(it) }?.let { childDir ->
+              val elfParser = runCatching { getElfParser(zipFile.getInputStream(entry)) }.getOrNull()
+              val item = LibStringItem(
+                name = entry.name.split(File.separator).last(),
+                size = entry.size,
+                source = "",
+                elfType = elfParser?.getEType() ?: ET_NOT_ELF,
+                elfClass = elfParser?.getEClass() ?: ELFParser.EIdent.ELFCLASSNONE,
+                pageSize = elfParser?.getPageSize() ?: PAGE_SIZE_4_KB
+              )
+              map[childDir]!!.add(item)
+            }
           }
-          .toList()
-          .ifEmpty { getSplitLibs(packageInfo) }
+          //.ifEmpty { getSplitLibs(packageInfo) }
       }
     }.onFailure {
       Timber.e(it)
-    }.getOrElse { emptyList() }
+    }
+    return map
   }
 
   /**
