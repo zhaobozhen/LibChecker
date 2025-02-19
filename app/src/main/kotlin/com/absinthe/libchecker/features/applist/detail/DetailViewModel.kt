@@ -107,26 +107,27 @@ class DetailViewModel : ViewModel() {
     return this::packageInfo.isInitialized
   }
 
-  fun initSoAnalysisData() = viewModelScope.launch(Dispatchers.IO) {
-    val sourceSet = hashSetOf<String>()
+  private var initSoAnalysisJob: Job? = null
 
-    try {
+  fun initSoAnalysisData() {
+    if (initSoAnalysisJob != null) return
+    initSoAnalysisJob = viewModelScope.launch(Dispatchers.IO) {
+      val sourceSet = hashSetOf<String>()
+
       allNativeLibItems = PackageUtils.getSourceLibs(packageInfo)
-    } catch (e: PackageManager.NameNotFoundException) {
-      Timber.e(e)
-    }
 
-    val sourceMap = sourceSet.filter { source -> source.isNotEmpty() }
-      .associateWith { UiUtils.getRandomColor() }
-    nativeSourceMap = sourceMap
+      val sourceMap = sourceSet.filter { source -> source.isNotEmpty() }
+        .associateWith { UiUtils.getRandomColor() }
+      nativeSourceMap = sourceMap
 
-    if (sourceMap.isNotEmpty()) {
-      processMapStateFlow.emit(sourceMap)
-    }
+      if (sourceMap.isNotEmpty()) {
+        processMapStateFlow.emit(sourceMap)
+      }
 
-    nativeLibTabs.emit(allNativeLibItems.keys)
-    if (allNativeLibItems.isEmpty()) {
-      nativeLibItems.emit(emptyList())
+      nativeLibTabs.emit(allNativeLibItems.keys)
+      if (allNativeLibItems.isEmpty()) {
+        nativeLibItems.emit(emptyList())
+      }
     }
   }
 

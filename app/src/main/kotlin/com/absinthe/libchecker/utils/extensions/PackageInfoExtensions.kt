@@ -748,6 +748,8 @@ const val PAGE_SIZE_4_KB = 0x1000
  * An app is considered to be 16KB-aligned only if:
  * - There's at least one native library present
  * - All native libraries have page sizes that are multiples of 16 KB
+ * - None of the native libraries are uncompressed and not 16 KB-aligned
+ * @see <a href="https://cs.android.com/android-studio/platform/tools/base/+/mirror-goog-studio-main:sdk-common/src/main/java/com/android/ide/common/pagealign/PageAlignUtils.kt">Ref</a>
  *
  */
 fun PackageInfo.is16KBAligned(isApk: Boolean = false): Boolean {
@@ -762,7 +764,9 @@ fun PackageInfo.is16KBAligned(isApk: Boolean = false): Boolean {
     packageInfo = this,
     specifiedAbi = PackageUtils.getAbi(this, isApk = isApk)
   )
-  return nativeLibs.isNotEmpty() && nativeLibs.all { it.elfInfo.pageSize % PAGE_SIZE_16_KB == 0 }
+  return nativeLibs.isNotEmpty() &&
+    nativeLibs.all { it.elfInfo.pageSize % PAGE_SIZE_16_KB == 0 } &&
+    nativeLibs.all { it.elfInfo.uncompressedAndNot16KB.not() }
 }
 
 /**
