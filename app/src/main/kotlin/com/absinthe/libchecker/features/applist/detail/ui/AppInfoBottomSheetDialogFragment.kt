@@ -13,6 +13,7 @@ import com.absinthe.libchecker.BuildConfig
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.compat.PackageManagerCompat
 import com.absinthe.libchecker.constant.Constants
+import com.absinthe.libchecker.features.applist.detail.glance.ui.GlanceBSDFragment
 import com.absinthe.libchecker.features.applist.detail.ui.adapter.AppInfoAdapter
 import com.absinthe.libchecker.features.applist.detail.ui.view.AppInfoBottomSheetView
 import com.absinthe.libchecker.utils.PackageUtils
@@ -91,6 +92,14 @@ class AppInfoBottomSheetDialogFragment : BaseBottomSheetViewDialogFragment<AppIn
       } finally {
         dismiss()
       }
+    }
+    root.glance.setOnClickListener {
+      GlanceBSDFragment.newInstance(packageName.orEmpty())
+        .show(childFragmentManager, GlanceBSDFragment::class.java.name)
+      Telemetry.recordEvent(
+        Constants.Event.APP_INFO_BOTTOM_SHEET,
+        mapOf(Telemetry.Param.CONTENT to packageName.toString(), "Action" to "Glance")
+      )
     }
     root.list.apply {
       adapter = aiAdapter

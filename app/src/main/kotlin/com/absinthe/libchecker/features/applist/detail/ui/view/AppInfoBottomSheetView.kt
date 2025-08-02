@@ -45,6 +45,17 @@ class AppInfoBottomSheetView(context: Context) :
     setText(R.string.app_info_settings)
   }
 
+  val glance = AppInfoItemView(context).apply {
+    layoutParams = LayoutParams(
+      ViewGroup.LayoutParams.MATCH_PARENT,
+      ViewGroup.LayoutParams.WRAP_CONTENT
+    )
+    setIcon(R.drawable.ic_settings)
+    setIconBackgroundTintColor(R.color.material_light_green_900)
+    setIconTintColor(Color.WHITE)
+    setText(R.string.app_info_glance)
+  }
+
   val list = RecyclerView(context).apply {
     layoutParams = LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
@@ -63,6 +74,7 @@ class AppInfoBottomSheetView(context: Context) :
     addView(header)
     addView(launch)
     addView(setting)
+    addView(glance)
     addView(list)
   }
 
@@ -72,6 +84,7 @@ class AppInfoBottomSheetView(context: Context) :
     val itemWidth = (measuredWidth - paddingStart - paddingEnd) / 4
     launch.measure(itemWidth.toExactlyMeasureSpec(), launch.defaultHeightMeasureSpec(this))
     setting.measure(itemWidth.toExactlyMeasureSpec(), setting.defaultHeightMeasureSpec(this))
+    glance.measure(itemWidth.toExactlyMeasureSpec(), glance.defaultHeightMeasureSpec(this))
     list.measure(
       (measuredWidth - paddingStart - paddingEnd).toExactlyMeasureSpec(),
       list.defaultHeightMeasureSpec(this)
@@ -86,6 +99,7 @@ class AppInfoBottomSheetView(context: Context) :
     header.layout(0, paddingTop)
     launch.layout(paddingStart, header.bottom + launch.marginTop)
     setting.layout(paddingStart + launch.measuredWidth, launch.top)
+    glance.layout(paddingStart + launch.measuredWidth + setting.measuredWidth, setting.top)
     list.layout(paddingStart, launch.bottom)
   }
 
