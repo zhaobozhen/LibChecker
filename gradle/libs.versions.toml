@@ -40,6 +40,7 @@ androidX-core = "androidx.core:core-ktx:1.17.0"
 androidX-fragment = "androidx.fragment:fragment-ktx:1.8.9"
 androidX-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "androidX-lifecycle" }
 androidX-lifecycle-viewModel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidX-lifecycle" }
+androidX-palette = "androidx.palette:palette-ktx:1.0.0"
 androidX-preference = "androidx.preference:preference-ktx:1.2.1"
 androidX-recyclerView = "androidx.recyclerview:recyclerview:1.4.0"
 androidX-room-compiler = { module = "androidx.room:room-compiler", version.ref = "androidX-room" }
