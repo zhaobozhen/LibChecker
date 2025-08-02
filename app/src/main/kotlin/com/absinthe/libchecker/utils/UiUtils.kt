@@ -12,6 +12,7 @@ import androidx.annotation.ColorInt
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.graphics.toColorInt
 import com.absinthe.libchecker.R
@@ -126,5 +127,12 @@ object UiUtils {
       }
       .setNegativeButton(android.R.string.cancel, null)
       .create()
+  }
+
+  fun desaturateColor(colorInt: Int, factor: Float): Int {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(colorInt, hsl)
+    hsl[1] = hsl[1] * (1 - factor)
+    return ColorUtils.HSLToColor(hsl)
   }
 }

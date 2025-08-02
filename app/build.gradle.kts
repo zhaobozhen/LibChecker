@@ -110,6 +110,7 @@ dependencies {
   implementation(libs.androidX.browser)
   implementation(libs.androidX.viewPager2)
   implementation(libs.androidX.recyclerView)
+  implementation(libs.androidX.palette)
   implementation(libs.androidX.preference)
   implementation(libs.androidX.window)
   implementation(libs.androidX.security)
