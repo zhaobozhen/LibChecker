@@ -16,6 +16,7 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.toColorInt
 import androidx.core.graphics.withRotation
 import com.absinthe.libchecker.BuildConfig
 import com.absinthe.libchecker.R
@@ -27,6 +28,7 @@ import com.absinthe.libchecker.view.app.IHeaderView
 import com.absinthe.libraries.utils.manager.SystemBarManager
 import com.absinthe.libraries.utils.view.BottomSheetHeaderView
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -90,6 +92,7 @@ class GlanceBSDView(context: Context) :
     drawTitleContent(canvas, info)
     drawPlanet(canvas, info, backgroundColor)
     drawCapsules(canvas, info)
+    drawSatellites(canvas, info)
 
     drawLogo(canvas)
     if (BuildConfig.IS_DEV_VERSION) {
@@ -128,7 +131,7 @@ class GlanceBSDView(context: Context) :
 
   private fun drawPlanet(canvas: Canvas, info: Info, backgroundColor: Int) {
     val centerX = image.width / 2f
-    val centerY = image.height / 2f
+    val centerY = image.height * 0.45f
     val iconSize = image.width * 0.382f
 
     // Draw satellite ring
@@ -160,7 +163,7 @@ class GlanceBSDView(context: Context) :
 
     // Draw app icon to the temporary canvas.
     val iconX = (image.width - iconSize) / 2f
-    val iconY = (image.height - iconSize) / 2f
+    val iconY = centerY - iconSize / 2f
     val icon = runCatching {
       PackageUtils.getPackageInfo(info.packageName)
         .applicationInfo!!.loadIcon(SystemServices.packageManager)
@@ -213,7 +216,7 @@ class GlanceBSDView(context: Context) :
     val ringRectWidth = iconSize * 2.2f
     val ringRectHeight = iconSize * 0.5f
     val capsulePadding = 8.dp
-    val topPadding = 12.dp
+    val topPadding = 24.dp
 
     // --- Calculate Capsule and Ring Dimensions ---
     val angle = 30.0
@@ -228,10 +231,10 @@ class GlanceBSDView(context: Context) :
     val boundingBoxHeight = 2 * sqrt(a * a * sinAngle * sinAngle + b * b * cosAngle * cosAngle)
 
     val ringLeftX = (image.width / 2f) - (boundingBoxWidth / 2f)
-    val ringBottomY = (image.height / 2f) + (boundingBoxHeight / 2f)
+    val ringBottomY = (image.height * 0.45f) + (boundingBoxHeight / 2f)
 
     val capsuleWidth = ((boundingBoxWidth - 2 * capsulePadding) / 3f).toFloat()
-    val capsuleHeight = capsuleWidth * 0.4f
+    val capsuleHeight = capsuleWidth * 0.45f
 
     // --- Draw Capsules in a Grid ---
     var currentX = ringLeftX
@@ -286,7 +289,6 @@ class GlanceBSDView(context: Context) :
 
     ContextCompat.getDrawable(context, info.iconRes)?.let {
       it.setBounds(iconLeft.toInt(), iconTop.toInt(), iconRight.toInt(), iconBottom.toInt())
-      // it.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
       it.alpha = (255 * 0.8).toInt()
       it.draw(canvas)
     }
@@ -343,6 +345,98 @@ class GlanceBSDView(context: Context) :
     }
   }
 
+  private fun drawSatellites(canvas: Canvas, info: Info) {
+    if (info.stars.isEmpty()) {
+      return
+    }
+
+    val centerX = image.width / 2f
+    val centerY = image.height * 0.45f
+    val iconSize = image.width * 0.382f
+    val ringWidth = iconSize * 2.2f
+    val ringHeight = iconSize * 0.5f
+    val a = ringWidth / 2.0
+    val b = ringHeight / 2.0
+    val satelliteRadius = iconSize / 10f
+    val minDistance = satelliteRadius * 3f // 2 * diameter
+
+    // 1. Select points that meet the distance constraint
+    val selectedPoints = mutableListOf<Pair<Double, Double>>()
+    val maxSatellites = minOf(info.stars.size, 8)
+    val maxAttemptsPerSatellite = 100 // Safety break to prevent infinite loops
+
+    for (i in 0 until maxSatellites) {
+      var attempt = 0
+      while (attempt < maxAttemptsPerSatellite) {
+        // Generate a random angle avoiding the occluded part in front of the planet
+        // With -30 degree rotation, the occluded part is roughly from 240° to 300° (4π/3 to 5π/3)
+        // So we generate angles from [0, 4π/3) ∪ (5π/3, 2π)
+        val angle = if (Math.random() < 0.8) {
+          // Main arc: [0, 4π/3) - larger probability for more distribution
+          Math.random() * (4 * Math.PI / 3)
+        } else {
+          // Small arc: (5π/3, 2π)
+          Math.random() * (Math.PI / 3) + (5 * Math.PI / 3)
+        }
+
+        val x = a * cos(angle)
+        val y = b * sin(angle)
+
+        var tooClose = false
+        for (p in selectedPoints) {
+          val dist = sqrt((x - p.first).pow(2) + (y - p.second).pow(2))
+          if (dist < minDistance) {
+            tooClose = true
+            break
+          }
+        }
+
+        if (!tooClose) {
+          selectedPoints.add(Pair(x, y))
+          break // Found a valid point, break the inner while loop
+        }
+        attempt++
+      }
+    }
+
+    // 2. Rotate and draw the selected satellites
+    val rotationRad = Math.toRadians(-30.0)
+    val cosRotation = cos(rotationRad)
+    val sinRotation = sin(rotationRad)
+
+    selectedPoints.forEachIndexed { index, point ->
+      val starInfo = info.stars.getOrNull(index) ?: return@forEachIndexed
+      val rotatedX = point.first * cosRotation - point.second * sinRotation
+      val rotatedY = point.first * sinRotation + point.second * cosRotation
+      val finalX = (rotatedX + centerX).toFloat()
+      val finalY = (rotatedY + centerY).toFloat()
+      drawSatellite(canvas, starInfo, finalX, finalY, satelliteRadius)
+    }
+  }
+
+  private fun drawSatellite(canvas: Canvas, star: StarInfo, cx: Float, cy: Float, radius: Float) {
+    // Draw the white circular background first
+    val backgroundPaint = Paint().apply {
+      isAntiAlias = true
+      color = "#232323".toColorInt()
+      // alpha = (255 * 0.618).toInt()
+    }
+    canvas.drawCircle(cx, cy, radius, backgroundPaint)
+
+    // Then draw the icon on top of the background
+    ContextCompat.getDrawable(context, star.iconRes)?.let {
+      val iconRadius = radius * 0.6f // Make icon slightly smaller than background
+      it.setBounds(
+        (cx - iconRadius).toInt(),
+        (cy - iconRadius).toInt(),
+        (cx + iconRadius).toInt(),
+        (cy + iconRadius).toInt()
+      )
+      it.alpha = (255 * 0.8).toInt()
+      it.draw(canvas)
+    }
+  }
+
   private val logoSize = 12.dp
   private val padding = 12.dp
 
@@ -377,12 +471,17 @@ class GlanceBSDView(context: Context) :
     val packageName: String,
     val versionName: String,
     val versionCode: Long,
-    val capsules: List<CapsuleInfo> = emptyList()
+    val capsules: List<CapsuleInfo> = emptyList(),
+    val stars: List<StarInfo> = emptyList()
   )
 
   data class CapsuleInfo(
     @DrawableRes val iconRes: Int,
     val content: String,
     val subcontent: String? = null
+  )
+
+  data class StarInfo(
+    @DrawableRes val iconRes: Int
   )
 }
