@@ -4,15 +4,22 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.PorterDuffXfermode
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.LinearLayout
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withRotation
 import com.absinthe.libchecker.BuildConfig
 import com.absinthe.libchecker.R
+import com.absinthe.libchecker.app.SystemServices
+import com.absinthe.libchecker.utils.PackageUtils
 import com.absinthe.libchecker.utils.extensions.displayWidth
 import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.view.app.IHeaderView
@@ -55,7 +62,7 @@ class GlanceBSDView(context: Context) :
     return header
   }
 
-  fun drawImage(backgroundColor: Int) {
+  fun drawImage(info: Info, backgroundColor: Int) {
     if (image.width <= 0 || image.height <= 0) {
       return
     }
@@ -76,8 +83,10 @@ class GlanceBSDView(context: Context) :
       paint
     )
 
-    drawLogo(canvas)
+    drawTitleContent(canvas, info)
+    drawPlanet(canvas, info, backgroundColor)
 
+    drawLogo(canvas)
     if (BuildConfig.IS_DEV_VERSION) {
       drawVersionCode(canvas)
     }
@@ -85,26 +94,129 @@ class GlanceBSDView(context: Context) :
     image.setImageBitmap(bitmap)
   }
 
+  private fun drawTitleContent(canvas: Canvas, info: Info) {
+    val textPaint = Paint().apply {
+      isAntiAlias = true
+      color = Color.WHITE
+      alpha = (255 * 0.618).toInt()
+      textSize = 14.dp.toFloat()
+      typeface = Typeface.DEFAULT_BOLD
+      textAlign = Paint.Align.CENTER
+    }
+
+    val textX = image.width / 2f
+
+    // Draw app name
+    val appNameFontMetrics = textPaint.fontMetrics
+    val appNameY = padding - appNameFontMetrics.ascent
+    canvas.drawText(info.appName, textX, appNameY, textPaint)
+
+    // Draw version name
+    textPaint.typeface = Typeface.DEFAULT
+    textPaint.alpha = (255 * 0.382).toInt()
+    textPaint.textSize = 10.dp.toFloat()
+    val versionNameFontMetrics = textPaint.fontMetrics
+    val versionNameY = appNameY + appNameFontMetrics.descent + 4.dp - versionNameFontMetrics.ascent
+    val versionText = "${info.versionName} (${info.versionCode})"
+    canvas.drawText(versionText, textX, versionNameY, textPaint)
+  }
+
+  private fun drawPlanet(canvas: Canvas, info: Info, backgroundColor: Int) {
+    val centerX = image.width / 2f
+    val centerY = image.height / 2f
+    val iconSize = image.width * 0.382f
+
+    // Draw satellite ring
+    val ringPaint = Paint().apply {
+      isAntiAlias = true
+      color = Color.WHITE
+      alpha = (255 * 0.2).toInt()
+      style = Paint.Style.STROKE
+      strokeWidth = 2.dp.toFloat()
+    }
+
+    val ringWidth = iconSize * 2.2f
+    val ringHeight = iconSize * 0.5f
+    val rect = RectF(
+      centerX - ringWidth / 2,
+      centerY - ringHeight / 2,
+      centerX + ringWidth / 2,
+      centerY + ringHeight / 2
+    )
+
+    // Draw back of the ring
+    canvas.withRotation(-30f, centerX, centerY) {
+      drawArc(rect, 180f, 180f, false, ringPaint)
+    }
+
+    // Create a temporary bitmap to draw the icon and erase part of it.
+    val iconBitmap = createBitmap(image.width, image.height)
+    val iconCanvas = Canvas(iconBitmap)
+
+    // Draw app icon to the temporary canvas.
+    val iconX = (image.width - iconSize) / 2f
+    val iconY = (image.height - iconSize) / 2f
+    val icon = runCatching {
+      PackageUtils.getPackageInfo(info.packageName)
+        .applicationInfo!!.loadIcon(SystemServices.packageManager)
+    }.getOrNull()
+    icon?.let {
+      it.setBounds(
+        iconX.toInt(),
+        iconY.toInt(),
+        (iconX + iconSize).toInt(),
+        (iconY + iconSize).toInt()
+      )
+      it.draw(iconCanvas)
+    }
+
+    // Erase the intersecting part from the temporary canvas.
+    val erasePaint = Paint().apply {
+      isAntiAlias = true
+      style = Paint.Style.STROKE
+      strokeWidth = ringPaint.strokeWidth + 4.dp // 2dp gap on each side
+      xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+    }
+
+    val frontRingPath = Path().apply {
+      val intersectionY = rect.bottom
+      moveTo(rect.left, rect.centerY())
+      quadTo(rect.left, intersectionY, centerX, intersectionY)
+      quadTo(rect.right, intersectionY, rect.right, rect.centerY())
+    }
+
+    iconCanvas.withRotation(-30f, centerX, centerY) {
+      drawPath(frontRingPath, erasePaint)
+    }
+
+    // Draw the result to the main canvas.
+    canvas.drawBitmap(iconBitmap, 0f, 0f, null)
+
+    // Draw the front of the ring on the main canvas.
+    canvas.withRotation(-30f, centerX, centerY) {
+      drawPath(frontRingPath, ringPaint)
+    }
+  }
+
+  private val logoSize = 12.dp
+  private val padding = 12.dp
+
   private fun drawLogo(canvas: Canvas) {
-    val logoSize = 16.dp
-    val padding = 16.dp
     ContextCompat.getDrawable(context, R.drawable.ic_logo)?.let {
       it.mutate()
       it.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
       it.alpha = (255 * 0.382).toInt()
-      it.setBounds(padding, padding, padding + logoSize, padding + logoSize)
+      it.setBounds(padding, image.height - logoSize - padding, padding + logoSize, image.height - padding)
       it.draw(canvas)
     }
   }
 
   private fun drawVersionCode(canvas: Canvas) {
-    val logoSize = 16.dp
-    val padding = 16.dp
     val textPaint = Paint().apply {
       isAntiAlias = true
       color = Color.WHITE
-      alpha = (255 * 0.382).toInt()
-      textSize = 12.dp.toFloat()
+      alpha = (255 * 0.05).toInt()
+      textSize = 10.dp.toFloat()
     }
     val text = "#${BuildConfig.VERSION_CODE}"
     val textPadding = 2.dp
@@ -114,4 +226,11 @@ class GlanceBSDView(context: Context) :
     val textY = logoCenterY - (fontMetrics.ascent + fontMetrics.descent) / 2
     canvas.drawText(text, textX, textY, textPaint)
   }
+
+  data class Info(
+    val appName: String,
+    val packageName: String,
+    val versionName: String,
+    val versionCode: Long
+  )
 }
