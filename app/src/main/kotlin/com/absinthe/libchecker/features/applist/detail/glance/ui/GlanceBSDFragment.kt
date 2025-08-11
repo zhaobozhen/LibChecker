@@ -10,6 +10,8 @@ import com.absinthe.libchecker.features.applist.detail.glance.ui.view.GlanceBSDV
 import com.absinthe.libchecker.features.applist.detail.ui.EXTRA_PACKAGE_NAME
 import com.absinthe.libchecker.utils.PackageUtils
 import com.absinthe.libchecker.utils.UiUtils
+import com.absinthe.libchecker.utils.extensions.getAppName
+import com.absinthe.libchecker.utils.extensions.getVersionCode
 import com.absinthe.libchecker.utils.extensions.putArguments
 import com.absinthe.libraries.utils.base.BaseBottomSheetViewDialogFragment
 import com.absinthe.libraries.utils.view.BottomSheetHeaderView
@@ -33,7 +35,13 @@ class GlanceBSDFragment : BaseBottomSheetViewDialogFragment<GlanceBSDView>() {
       val palette = Palette.from(icon).generate()
       val color = UiUtils.desaturateColor(palette.dominantSwatch!!.rgb, 0.618f)
       withContext(Dispatchers.Main) {
-        root.drawImage(color)
+        val info = GlanceBSDView.Info(
+          appName = pi.getAppName() ?: "null",
+          packageName = packageName,
+          versionName = pi.versionName ?: "null",
+          versionCode = pi.getVersionCode()
+        )
+        root.drawImage(info, color)
       }
     }
   }

@@ -95,7 +95,8 @@ class AppInfoBottomSheetDialogFragment : BaseBottomSheetViewDialogFragment<AppIn
     }
     root.glance.setOnClickListener {
       GlanceBSDFragment.newInstance(packageName.orEmpty())
-        .show(childFragmentManager, GlanceBSDFragment::class.java.name)
+        .show(parentFragmentManager, GlanceBSDFragment::class.java.name)
+      dismiss()
       Telemetry.recordEvent(
         Constants.Event.APP_INFO_BOTTOM_SHEET,
         mapOf(Telemetry.Param.CONTENT to packageName.toString(), "Action" to "Glance")
