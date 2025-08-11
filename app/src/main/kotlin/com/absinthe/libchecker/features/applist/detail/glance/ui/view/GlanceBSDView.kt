@@ -12,6 +12,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.LinearLayout
+import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
@@ -25,6 +26,9 @@ import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.view.app.IHeaderView
 import com.absinthe.libraries.utils.manager.SystemBarManager
 import com.absinthe.libraries.utils.view.BottomSheetHeaderView
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class GlanceBSDView(context: Context) :
   LinearLayout(context),
@@ -85,6 +89,7 @@ class GlanceBSDView(context: Context) :
 
     drawTitleContent(canvas, info)
     drawPlanet(canvas, info, backgroundColor)
+    drawCapsules(canvas, info)
 
     drawLogo(canvas)
     if (BuildConfig.IS_DEV_VERSION) {
@@ -198,6 +203,146 @@ class GlanceBSDView(context: Context) :
     }
   }
 
+  private fun drawCapsules(canvas: Canvas, info: Info) {
+    if (info.capsules.isEmpty()) {
+      return
+    }
+
+    // --- Define Geometry & Constants ---
+    val iconSize = image.width * 0.382f
+    val ringRectWidth = iconSize * 2.2f
+    val ringRectHeight = iconSize * 0.5f
+    val capsulePadding = 8.dp
+    val topPadding = 12.dp
+
+    // --- Calculate Capsule and Ring Dimensions ---
+    val angle = 30.0
+    val angleRad = Math.toRadians(angle)
+    val a = ringRectWidth / 2.0
+    val b = ringRectHeight / 2.0
+    val cosAngle = cos(angleRad)
+    val sinAngle = sin(angleRad)
+
+    // Bounding box of the rotated ring
+    val boundingBoxWidth = 2 * sqrt(a * a * cosAngle * cosAngle + b * b * sinAngle * sinAngle)
+    val boundingBoxHeight = 2 * sqrt(a * a * sinAngle * sinAngle + b * b * cosAngle * cosAngle)
+
+    val ringLeftX = (image.width / 2f) - (boundingBoxWidth / 2f)
+    val ringBottomY = (image.height / 2f) + (boundingBoxHeight / 2f)
+
+    val capsuleWidth = ((boundingBoxWidth - 2 * capsulePadding) / 3f).toFloat()
+    val capsuleHeight = capsuleWidth * 0.4f
+
+    // --- Draw Capsules in a Grid ---
+    var currentX = ringLeftX
+    var currentY = ringBottomY + topPadding
+
+    info.capsules.forEachIndexed { index, capsuleInfo ->
+      if (index > 0 && index % 3 == 0) {
+        // New row
+        currentX = ringLeftX
+        currentY += capsuleHeight + capsulePadding
+      }
+
+      drawCapsule(
+        canvas,
+        capsuleInfo,
+        currentX.toFloat(),
+        currentY.toFloat(),
+        capsuleWidth,
+        capsuleHeight
+      )
+
+      currentX += capsuleWidth + capsulePadding
+    }
+  }
+
+  private fun drawCapsule(
+    canvas: Canvas,
+    info: CapsuleInfo,
+    left: Float,
+    top: Float,
+    width: Float,
+    height: Float
+  ) {
+    val capsuleRadius = height / 2f
+    val capsuleRect = RectF(left, top, left + width, top + height)
+
+    // 2. Draw the Capsule Body
+    val capsulePaint = Paint().apply {
+      isAntiAlias = true
+      color = Color.WHITE
+      alpha = (255 * 0.1).toInt() // Semi-transparent
+    }
+    canvas.drawRoundRect(capsuleRect, capsuleRadius, capsuleRadius, capsulePaint)
+
+    // 3. Draw the Icon
+    val iconDrawableSize = height - 8.dp
+    val iconMargin = (height - iconDrawableSize) / 2
+    val iconLeft = left + iconMargin
+    val iconTop = top + iconMargin
+    val iconRight = iconLeft + iconDrawableSize
+    val iconBottom = iconTop + iconDrawableSize
+
+    ContextCompat.getDrawable(context, info.iconRes)?.let {
+      it.setBounds(iconLeft.toInt(), iconTop.toInt(), iconRight.toInt(), iconBottom.toInt())
+      // it.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+      it.alpha = (255 * 0.8).toInt()
+      it.draw(canvas)
+    }
+
+    // 4. Draw the Content Text
+    if (info.subcontent.isNullOrEmpty()) {
+      // Center single line of text
+      val textPaint = Paint().apply {
+        isAntiAlias = true
+        color = Color.WHITE
+        alpha = (255 * 0.8).toInt()
+        textSize = 8.dp.toFloat()
+        textAlign = Paint.Align.CENTER
+      }
+      val remainingSpaceCenterX = iconRight + (capsuleRect.right - iconRight) / 2f
+      val textCenterY = top + height / 2
+      val fontMetrics = textPaint.fontMetrics
+      val textY = textCenterY - (fontMetrics.ascent + fontMetrics.descent) / 2f
+      canvas.drawText(info.content, remainingSpaceCenterX, textY, textPaint)
+    } else {
+      // Draw two lines of text, left-aligned
+      val contentPaint = Paint().apply {
+        isAntiAlias = true
+        color = Color.WHITE
+        alpha = (255 * 0.8).toInt()
+        textSize = 8.dp.toFloat()
+        textAlign = Paint.Align.LEFT
+      }
+      val subContentPaint = Paint().apply {
+        isAntiAlias = true
+        color = Color.WHITE
+        alpha = (255 * 0.6).toInt() // slightly more transparent
+        textSize = 6.dp.toFloat() // smaller
+        textAlign = Paint.Align.LEFT
+      }
+
+      val textLeft = iconRight + 2.dp
+      val textPadding = 0.dp
+
+      // Calculate total height of the text block
+      val contentMetrics = contentPaint.fontMetrics
+      val subContentMetrics = subContentPaint.fontMetrics
+      val contentHeight = contentMetrics.descent - contentMetrics.ascent
+      val subContentHeight = subContentMetrics.descent - subContentMetrics.ascent
+      val totalTextHeight = contentHeight + subContentHeight + textPadding
+
+      // Calculate Y positions
+      val blockTopY = (top + height / 2) - totalTextHeight / 2
+      val contentY = blockTopY - contentMetrics.ascent
+      val subContentY = contentY + contentMetrics.descent - subContentMetrics.ascent + textPadding
+
+      canvas.drawText(info.content, textLeft, contentY, contentPaint)
+      canvas.drawText(info.subcontent, textLeft, subContentY, subContentPaint)
+    }
+  }
+
   private val logoSize = 12.dp
   private val padding = 12.dp
 
@@ -231,6 +376,13 @@ class GlanceBSDView(context: Context) :
     val appName: String,
     val packageName: String,
     val versionName: String,
-    val versionCode: Long
+    val versionCode: Long,
+    val capsules: List<CapsuleInfo> = emptyList()
+  )
+
+  data class CapsuleInfo(
+    @DrawableRes val iconRes: Int,
+    val content: String,
+    val subcontent: String? = null
   )
 }
