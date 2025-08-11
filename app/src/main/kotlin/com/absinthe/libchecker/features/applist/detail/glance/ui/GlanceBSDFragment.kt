@@ -68,6 +68,16 @@ class GlanceBSDFragment : BaseBottomSheetViewDialogFragment<GlanceBSDView>() {
               "Kotlin",
               "1.9.20"
             )
+          ),
+          stars = listOf(
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_jd),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_qt),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_airbnb),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_alibaba),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_bilibili),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_facebook),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_google_arcore),
+            GlanceBSDView.StarInfo(com.absinthe.lc.rulesbundle.R.drawable.ic_lib_webrtc)
           )
         )
         root.drawImage(info, color)
