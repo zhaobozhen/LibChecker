@@ -3,7 +3,6 @@ import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.parcelize)
   alias(libs.plugins.protobuf)
   alias(libs.plugins.hiddenApiRefine)

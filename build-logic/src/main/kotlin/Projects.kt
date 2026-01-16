@@ -76,15 +76,7 @@ fun Project.setupAppModule(block: BaseAppModuleExtension.() -> Unit = {}) {
 
 private inline fun <reified T : BaseExtension> Project.setupBaseModule(crossinline block: T.() -> Unit = {}) {
   extensions.configure<BaseExtension>("android") {
-    (this as? CommonExtension<*, *, *, *, *, *>)?.apply {
-      compileSdk {
-        version = release(36) {
-          minorApiLevel = 1
-        }
-      }
-    } ?: {
-      compileSdkVersion(36)
-    }
+    compileSdkVersion(36)
     defaultConfig {
       minSdk = 24
       targetSdk = 36
