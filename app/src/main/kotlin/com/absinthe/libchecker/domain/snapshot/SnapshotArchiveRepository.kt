@@ -1,0 +1,16 @@
+package com.absinthe.libchecker.domain.snapshot
+
+import com.absinthe.libchecker.database.entity.SnapshotItem
+import com.absinthe.libchecker.database.entity.TimeStampItem
+
+interface SnapshotArchiveRepository {
+  fun getTimeStamps(): List<TimeStampItem>
+
+  suspend fun getSnapshots(timeStamp: Long): List<SnapshotItem>
+
+  suspend fun insertSnapshots(items: List<SnapshotItem>)
+
+  suspend fun insertTimeStamp(item: TimeStampItem)
+
+  suspend fun deleteDuplicateSnapshotItems()
+}
