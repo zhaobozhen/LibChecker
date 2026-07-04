@@ -9,7 +9,10 @@ import com.absinthe.libchecker.domain.app.update.AppUpdateChannel
 import com.absinthe.libchecker.domain.app.update.AppUpdateInstallResult
 import com.absinthe.libchecker.domain.app.update.BuildInAppUpdateDiffDataUseCase
 import com.absinthe.libchecker.domain.settings.presentation.SettingsViewModel
+import com.absinthe.libchecker.domain.snapshot.list.model.SnapshotItemCardPresentation
+import com.absinthe.libchecker.domain.snapshot.list.model.SnapshotItemDisplayData
 import com.absinthe.libchecker.domain.snapshot.list.usecase.BuildSnapshotItemDisplayDataUseCase
+import com.absinthe.libchecker.domain.snapshot.model.SnapshotDiffItem
 import com.absinthe.libchecker.ui.base.BaseBottomSheetViewDialogFragment
 import com.absinthe.libchecker.utils.Toasty
 import com.absinthe.libchecker.utils.extensions.addPaddingTop
@@ -30,10 +33,7 @@ class InAppUpdateDialogFragment : BaseBottomSheetViewDialogFragment<InAppUpdateD
   private var getAppUpdateInfo: GetAppUpdateInfo? = null
   private var selectedChannel: AppUpdateChannel = AppUpdateChannel.STABLE
 
-  override fun initRootView(): InAppUpdateDialogView = InAppUpdateDialogView(
-    requireContext(),
-    buildSnapshotItemDisplayData
-  )
+  override fun initRootView(): InAppUpdateDialogView = InAppUpdateDialogView(requireContext())
 
   override fun getHeaderView(): BottomSheetHeaderView = root.getHeaderView()
 
@@ -68,7 +68,7 @@ class InAppUpdateDialogFragment : BaseBottomSheetViewDialogFragment<InAppUpdateD
       root.apply {
         doOnMainThreadIdle { toggleGroup.isEnabled = true }
         updateButton.isEnabled = diffData?.hasUpdate == true
-        setItem(diffData?.item)
+        setItem(diffData?.item?.let(::buildUpdateDisplayData))
         showContent()
       }
     }.launchIn(lifecycleScope)
@@ -111,5 +111,21 @@ class InAppUpdateDialogFragment : BaseBottomSheetViewDialogFragment<InAppUpdateD
         Toasty.showLong(requireContext(), getString(R.string.toast_app_update_failed, message))
       }
     }
+  }
+
+  private fun buildUpdateDisplayData(item: SnapshotDiffItem): SnapshotItemDisplayData {
+    return buildSnapshotItemDisplayData(
+      BuildSnapshotItemDisplayDataUseCase.Request(
+        item = item,
+        cardPresentation = SnapshotItemCardPresentation.Rounded,
+        iconSource = null,
+        showUpdateTime = false,
+        isApexPackage = false,
+        animateStateIndicator = false,
+        tintChangedAbiBadge = false,
+        highlightDiffs = false,
+        highlightText = ""
+      )
+    )
   }
 }
