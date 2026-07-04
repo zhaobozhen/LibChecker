@@ -1,16 +1,15 @@
 package com.absinthe.libchecker.data.app.update
 
-import android.app.DownloadManager
-import android.os.Environment
-import androidx.core.net.toUri
+import android.content.Context
 import com.absinthe.libchecker.api.ApiManager
 import com.absinthe.libchecker.api.bean.GetAppUpdateInfo
 import com.absinthe.libchecker.api.request.GetAppUpdateRequest
 import com.absinthe.libchecker.domain.app.update.AppUpdateChannel
+import com.absinthe.libchecker.domain.app.update.AppUpdateInstallResult
 import com.absinthe.libchecker.domain.app.update.AppUpdateRepository
 
 class AndroidAppUpdateRepository(
-  private val downloadManager: DownloadManager,
+  @Suppress("UNUSED_PARAMETER") context: Context,
   private val request: GetAppUpdateRequest = ApiManager.create()
 ) : AppUpdateRepository {
 
@@ -18,14 +17,8 @@ class AndroidAppUpdateRepository(
     return request.requestAppUpdateInfo(channel.requestValue)
   }
 
-  override fun enqueueApkDownload(url: String): Long {
-    val request = DownloadManager.Request(url.toUri()).apply {
-      setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE)
-      setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-      setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substringAfterLast("/"))
-    }
-
-    return downloadManager.enqueue(request)
+  override suspend fun installUpdate(url: String): AppUpdateInstallResult {
+    return AppUpdateInstallResult.Unsupported
   }
 
   private val AppUpdateChannel.requestValue: String

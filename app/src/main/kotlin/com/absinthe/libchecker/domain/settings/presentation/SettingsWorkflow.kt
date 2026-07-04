@@ -12,6 +12,7 @@ import com.absinthe.libchecker.constant.URLManager
 import com.absinthe.libchecker.domain.app.AppListSettingsRepository
 import com.absinthe.libchecker.domain.app.list.export.ExportInstalledAppsToUriUseCase
 import com.absinthe.libchecker.domain.app.update.AppUpdateChannel
+import com.absinthe.libchecker.domain.app.update.AppUpdateInstallResult
 import com.absinthe.libchecker.domain.app.update.AppUpdateRepository
 import com.absinthe.libchecker.domain.rules.CloudRulesDownloadRequest
 import com.absinthe.libchecker.domain.rules.CloudRulesRepository
@@ -50,12 +51,7 @@ class SettingsWorkflow(
   private val updateLibReferenceThresholdUseCase: UpdateLibReferenceThresholdUseCase
 ) {
 
-  suspend fun requestUpdateInfo(isStableChannel: Boolean): GetAppUpdateInfo? {
-    val channel = if (isStableChannel) {
-      AppUpdateChannel.STABLE
-    } else {
-      AppUpdateChannel.CI
-    }
+  suspend fun requestUpdateInfo(channel: AppUpdateChannel): GetAppUpdateInfo? {
     return runCatching {
       appUpdateRepository.requestUpdateInfo(channel)
     }.onFailure { Timber.e("requestUpdateFail: %s", it.stackTraceToString()) }
@@ -63,8 +59,8 @@ class SettingsWorkflow(
       .getOrNull()
   }
 
-  suspend fun downloadApk(url: String) {
-    appUpdateRepository.enqueueApkDownload(url)
+  suspend fun installUpdate(url: String): AppUpdateInstallResult {
+    return appUpdateRepository.installUpdate(url)
   }
 
   suspend fun setColorfulRuleIcon(enabled: Boolean) {

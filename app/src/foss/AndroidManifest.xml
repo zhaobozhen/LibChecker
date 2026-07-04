@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+
+  <application>
+    <receiver
+      android:name=".data.app.update.AppUpdateInstallResultReceiver"
+      android:exported="false" />
+  </application>
+
+</manifest>
