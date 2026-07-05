@@ -9,8 +9,8 @@ import androidx.core.content.FileProvider
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.api.bean.GetAppUpdateInfo
 import com.absinthe.libchecker.constant.URLManager
-import com.absinthe.libchecker.domain.app.AppListSettingsRepository
 import com.absinthe.libchecker.domain.app.list.export.ExportInstalledAppsToUriUseCase
+import com.absinthe.libchecker.domain.app.repository.AppListSettingsRepository
 import com.absinthe.libchecker.domain.app.update.AppUpdateChannel
 import com.absinthe.libchecker.domain.app.update.AppUpdateInstallResult
 import com.absinthe.libchecker.domain.app.update.AppUpdateRepository
