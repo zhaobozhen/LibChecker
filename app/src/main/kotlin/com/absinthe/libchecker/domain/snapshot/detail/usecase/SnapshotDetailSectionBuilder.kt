@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import androidx.core.text.buildSpannedString
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.annotation.ACTIVITY
+import com.absinthe.libchecker.annotation.DEX
 import com.absinthe.libchecker.annotation.LibType
 import com.absinthe.libchecker.annotation.METADATA
 import com.absinthe.libchecker.annotation.NATIVE
@@ -29,6 +30,7 @@ import com.absinthe.libchecker.domain.snapshot.detail.model.buildSnapshotDetailR
 import com.absinthe.libchecker.domain.snapshot.detail.model.buildSnapshotDetailRuleChipDisplayData
 import com.absinthe.libchecker.domain.snapshot.detail.model.buildSnapshotDetailSectionDescription
 import com.absinthe.libchecker.domain.snapshot.detail.model.buildSnapshotDetailSummary
+import com.absinthe.libchecker.domain.snapshot.detail.model.colorSnapshotDetailMetricDeltas
 import com.absinthe.libchecker.domain.snapshot.detail.model.emphasizeSnapshotDetailDiffArrows
 import com.absinthe.libchecker.domain.snapshot.model.ADDED
 import com.absinthe.libchecker.domain.snapshot.model.CHANGED
@@ -38,6 +40,7 @@ import com.absinthe.libchecker.domain.snapshot.model.SnapshotDetailItem
 import com.absinthe.libchecker.domain.snapshot.model.SnapshotDiffItem
 import com.absinthe.libchecker.utils.LCAppUtils
 import com.absinthe.libchecker.utils.PackageUtils
+import com.absinthe.libchecker.utils.dex.DexEntryInfo
 import com.absinthe.libchecker.utils.extensions.sizeToString
 import com.absinthe.libchecker.utils.fromJson
 import com.absinthe.rulesbundle.Rule
@@ -100,6 +103,20 @@ class SnapshotDetailSectionBuilder(
         )
       )
     )
+
+    list.addAll(
+      getDexDiffList(
+        item.dexInfoDiff.old.fromJson<List<DexEntryInfo>>(
+          List::class.java,
+          DexEntryInfo::class.java
+        ) ?: emptyList(),
+        item.dexInfoDiff.new?.fromJson<List<DexEntryInfo>>(
+          List::class.java,
+          DexEntryInfo::class.java
+        )
+      )
+    )
+    getResourcesDiffItem(item.resourcesSizeDiff)?.let(list::add)
 
     val sections = buildSections(list, diffTextStyle)
     SnapshotDetailContent(
@@ -189,7 +206,12 @@ class SnapshotDetailSectionBuilder(
     } else {
       item.extra
     }
-    return highlighted.emphasizeSnapshotDetailDiffArrows(style.arrowColor)
+    val arrowEmphasized = highlighted.emphasizeSnapshotDetailDiffArrows(style.arrowColor)
+    return if (item.itemType == NATIVE || item.itemType == DEX) {
+      arrowEmphasized.colorSnapshotDetailMetricDeltas(style.metricDeltaColor)
+    } else {
+      arrowEmphasized
+    }
   }
 
   private fun highlightChangedExtra(
@@ -197,25 +219,7 @@ class SnapshotDetailSectionBuilder(
     @ColorInt highlightColor: Int?,
     emphasizeDiffs: Boolean
   ): CharSequence {
-    val rawText = extra.toString()
-    val separator = " $SNAPSHOT_DETAIL_DIFF_ARROW "
-    val firstLineEnd = rawText.indexOf('\n').takeIf { it >= 0 } ?: rawText.length
-    val separatorStart = rawText.indexOf(separator)
-    val newValueStart = separatorStart + separator.length
-    if (separatorStart <= 0 || newValueStart >= firstLineEnd) return extra
-
-    val highlighted = LCAppUtils.getHighlightDifferences(
-      oldString = rawText.substring(0, separatorStart),
-      newString = rawText.substring(newValueStart, firstLineEnd),
-      highlightDiffColor = highlightColor,
-      emphasizeDiffs = emphasizeDiffs
-    )
-    return buildSpannedString {
-      append(highlighted.first)
-      append(separator)
-      append(highlighted.second)
-      append(rawText.substring(firstLineEnd))
-    }
+    return highlightSnapshotDetailChangedLines(extra, highlightColor, emphasizeDiffs)
   }
 
   private fun buildStatusCounts(items: List<SnapshotDetailItemDisplayData>): List<SnapshotDetailStatusCount> {
@@ -244,6 +248,7 @@ class SnapshotDetailSectionBuilder(
       PROVIDER -> R.string.ref_category_cp
       PERMISSION -> R.string.ref_category_perm
       METADATA -> R.string.ref_category_metadata
+      DEX -> R.string.ref_category_package
       else -> android.R.string.untitled
     }
   }
@@ -506,9 +511,233 @@ class SnapshotDetailSectionBuilder(
     return list
   }
 
+  private fun getDexDiffList(
+    oldList: List<DexEntryInfo>,
+    newList: List<DexEntryInfo>?
+  ): List<SnapshotDetailItem> {
+    val list = mutableListOf<SnapshotDetailItem>()
+    if (newList == null) return list
+
+    val oldByName = oldList.associateBy { it.name }
+    val newByName = newList.associateBy { it.name }
+    val allEntryNames = (oldByName.keys + newByName.keys).toList()
+
+    for ((name, newEntry) in newByName) {
+      val oldEntry = oldByName[name]
+      val displayName = buildDexDisplayName(name, allEntryNames)
+      if (oldEntry == null) {
+        list.add(
+          SnapshotDetailItem(
+            name = name,
+            title = displayName,
+            extra = buildDexExtra(newEntry),
+            diffType = ADDED,
+            itemType = DEX
+          )
+        )
+      } else if (oldEntry.size != newEntry.size || oldEntry.classCount != newEntry.classCount) {
+        list.add(
+          SnapshotDetailItem(
+            name = name,
+            title = displayName,
+            extra = buildDexChangedExtra(
+              oldEntry = oldEntry,
+              newEntry = newEntry,
+              formatSize = { it.sizeToString(context) },
+              formatClassCount = { count ->
+                context.resources.getQuantityString(
+                  R.plurals.snapshot_dex_classes_count,
+                  count,
+                  NumberFormat.getIntegerInstance().format(count)
+                )
+              },
+              formatSizeDelta = { it.sizeToString(context) }
+            ),
+            diffType = CHANGED,
+            itemType = DEX
+          )
+        )
+      }
+    }
+
+    for ((name, oldEntry) in oldByName) {
+      if (name !in newByName) {
+        list.add(
+          SnapshotDetailItem(
+            name = name,
+            title = buildDexDisplayName(name, allEntryNames),
+            extra = buildDexExtra(oldEntry),
+            diffType = REMOVED,
+            itemType = DEX
+          )
+        )
+      }
+    }
+
+    return list
+  }
+
+  private fun buildDexExtra(entry: DexEntryInfo): String {
+    return buildString {
+      append(entry.size.sizeToString(context))
+      appendLine()
+      append(
+        context.resources.getQuantityString(
+          R.plurals.snapshot_dex_classes_count,
+          entry.classCount,
+          NumberFormat.getIntegerInstance().format(entry.classCount)
+        )
+      )
+    }
+  }
+
+  private fun getResourcesDiffItem(
+    diffNode: SnapshotDiffItem.DiffNode<Long>
+  ): SnapshotDetailItem? {
+    val newSize = diffNode.new ?: return null
+    if (diffNode.old == newSize) return null
+    return SnapshotDetailItem(
+      name = RESOURCES_ARSC,
+      title = RESOURCES_ARSC,
+      extra = buildSizeChangedExtra(
+        oldSize = diffNode.old,
+        newSize = newSize,
+        formatSize = { it.sizeToString(context) },
+        formatSizeDelta = { it.sizeToString(context) }
+      ),
+      diffType = CHANGED,
+      itemType = DEX
+    )
+  }
+
   private companion object {
     const val ARROW = "→"
+    const val RESOURCES_ARSC = "resources.arsc"
     val orderedStatuses = listOf(ADDED, REMOVED, CHANGED, MOVED)
-    val orderedTypes = listOf(NATIVE, SERVICE, ACTIVITY, RECEIVER, PROVIDER, PERMISSION, METADATA)
+    val orderedTypes = listOf(NATIVE, SERVICE, ACTIVITY, RECEIVER, PROVIDER, PERMISSION, METADATA, DEX)
+  }
+}
+
+internal fun highlightSnapshotDetailChangedLines(
+  extra: CharSequence,
+  @ColorInt highlightColor: Int?,
+  emphasizeDiffs: Boolean
+): CharSequence {
+  val separator = " $SNAPSHOT_DETAIL_DIFF_ARROW "
+  return buildSpannedString {
+    parseSnapshotDetailChangedLines(extra).forEachIndexed { index, line ->
+      if (index > 0) {
+        append('\n')
+      }
+      if (line.oldValue == null || line.newValue == null) {
+        append(line.rawText)
+        return@forEachIndexed
+      }
+
+      val highlighted = LCAppUtils.getHighlightDifferences(
+        oldString = line.oldValue,
+        newString = line.newValue,
+        highlightDiffColor = highlightColor,
+        emphasizeDiffs = emphasizeDiffs
+      )
+      append(highlighted.first)
+      append(separator)
+      append(highlighted.second)
+    }
+  }
+}
+
+internal fun parseSnapshotDetailChangedLines(
+  extra: CharSequence
+): List<SnapshotDetailChangedLine> {
+  val separator = " $SNAPSHOT_DETAIL_DIFF_ARROW "
+  return extra.toString().split('\n').map { line ->
+    val separatorStart = line.indexOf(separator)
+    val newValueStart = separatorStart + separator.length
+    if (separatorStart <= 0 || newValueStart >= line.length) {
+      SnapshotDetailChangedLine(line, null, null)
+    } else {
+      SnapshotDetailChangedLine(
+        rawText = line,
+        oldValue = line.substring(0, separatorStart),
+        newValue = line.substring(newValueStart)
+      )
+    }
+  }
+}
+
+internal data class SnapshotDetailChangedLine(
+  val rawText: String,
+  val oldValue: String?,
+  val newValue: String?
+)
+
+internal fun buildDexChangedExtra(
+  oldEntry: DexEntryInfo,
+  newEntry: DexEntryInfo,
+  formatSize: (Long) -> String,
+  formatClassCount: (Int) -> String,
+  formatSizeDelta: (Long) -> String
+): String {
+  val sizeExtra = buildMetricChangedExtra(
+    oldValue = oldEntry.size,
+    newValue = newEntry.size,
+    formatValue = formatSize,
+    formatDelta = formatSizeDelta
+  )
+  val classesExtra = buildMetricChangedExtra(
+    oldValue = oldEntry.classCount.toLong(),
+    newValue = newEntry.classCount.toLong(),
+    formatValue = { formatClassCount(it.toInt()) },
+    formatDelta = { formatClassCount(it.toInt()) }
+  )
+  return "$sizeExtra\n$classesExtra"
+}
+
+internal fun buildSizeChangedExtra(
+  oldSize: Long,
+  newSize: Long,
+  formatSize: (Long) -> String,
+  formatSizeDelta: (Long) -> String
+): String {
+  return buildMetricChangedExtra(
+    oldValue = oldSize,
+    newValue = newSize,
+    formatValue = formatSize,
+    formatDelta = formatSizeDelta
+  )
+}
+
+internal fun buildDexDisplayName(
+  name: String,
+  allEntryNames: Collection<String>
+): String {
+  val hasSplitSource = allEntryNames.any { it.startsWith("split:") }
+  return if (!hasSplitSource) name.removePrefix("base/") else name
+}
+
+private fun buildMetricChangedExtra(
+  oldValue: Long,
+  newValue: Long,
+  formatValue: (Long) -> String,
+  formatDelta: (Long) -> String
+): String {
+  val delta = newValue - oldValue
+  return buildString {
+    append(formatValue(oldValue))
+    append(" $SNAPSHOT_DETAIL_DIFF_ARROW ")
+    append(formatValue(newValue))
+    if (delta != 0L) {
+      appendLine()
+      append(if (delta > 0L) "+" else "-")
+      append(formatDelta(abs(delta)))
+      if (oldValue != 0L) {
+        append(", ")
+        if (delta > 0L) {
+          append("+")
+        }
+        append(String.format(Locale.getDefault(), "%.1f%%", delta.toDouble() / oldValue * 100))
+      }
+    }
   }
 }

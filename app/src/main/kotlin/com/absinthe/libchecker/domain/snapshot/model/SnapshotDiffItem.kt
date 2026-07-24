@@ -22,6 +22,8 @@ data class SnapshotDiffItem(
   val permissionsDiff: DiffNode<String>,
   val metadataDiff: DiffNode<String>,
   val packageSizeDiff: DiffNode<Long>,
+  val dexInfoDiff: DiffNode<String> = DiffNode(""),
+  val resourcesSizeDiff: DiffNode<Long> = DiffNode(0L),
   var added: Int = 0,
   var removed: Int = 0,
   var changed: Int = 0,

@@ -5,10 +5,16 @@ import android.view.View
 import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.core.view.isVisible
 import com.absinthe.libchecker.R
+import com.absinthe.libchecker.annotation.DEX
+import com.absinthe.libchecker.domain.snapshot.detail.model.SnapshotDetailContent
+import com.absinthe.libchecker.domain.snapshot.detail.ui.adapter.SnapshotDetailAdapter
+import com.absinthe.libchecker.domain.snapshot.detail.ui.adapter.node.SnapshotComponentNode
 import com.absinthe.libchecker.domain.snapshot.detail.ui.model.SnapshotNoDiffMode
 import com.absinthe.libchecker.domain.snapshot.detail.ui.model.SnapshotNoDiffRenderState
 import com.absinthe.libchecker.domain.snapshot.detail.ui.model.SnapshotNoDiffTitleIconRenderState
+import com.absinthe.libchecker.ui.app.BottomSheetRecyclerView
 import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.view.app.IHeaderView
 import com.absinthe.libraries.utils.view.BottomSheetHeaderView
@@ -33,6 +39,15 @@ class SnapshotNoDiffBSView(context: Context) :
   }
 
   private var stubView: View? = null
+  private val detailAdapter = SnapshotDetailAdapter()
+  private val detailList = BottomSheetRecyclerView(context).apply {
+    layoutParams = LayoutParams(
+      LayoutParams.MATCH_PARENT,
+      LayoutParams.WRAP_CONTENT
+    )
+    adapter = detailAdapter
+    isVisible = false
+  }
 
   init {
     layoutParams =
@@ -41,6 +56,7 @@ class SnapshotNoDiffBSView(context: Context) :
     setPadding(24.dp, 16.dp, 24.dp, 0)
     addView(header)
     addView(title)
+    addView(detailList)
   }
 
   fun render(state: SnapshotNoDiffRenderState) {
@@ -56,7 +72,18 @@ class SnapshotNoDiffBSView(context: Context) :
     title.setIconClickListener(onClickListener.takeIf { state.opensDetailOnClick })
   }
 
+  fun renderPackageChanges(content: SnapshotDetailContent) {
+    val nodes = content.sections
+      .filter { it.type == DEX }
+      .flatMap { section ->
+        section.items.map(::SnapshotComponentNode)
+      }
+    detailAdapter.setList(nodes)
+    detailList.isVisible = nodes.isNotEmpty()
+  }
+
   private fun setMode(mode: SnapshotNoDiffMode) {
+    detailList.isVisible = false
     stubView?.let {
       if (it.parent != null) {
         (it.parent as ViewGroup).removeView(it)
@@ -83,8 +110,12 @@ class SnapshotNoDiffBSView(context: Context) :
             LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
         }
       }
+
+      SnapshotNoDiffMode.PackageChanges -> {
+        stubView = null
+      }
     }
-    addView(stubView)
+    stubView?.let(::addView)
   }
 
   override fun getHeaderView(): BottomSheetHeaderView {

@@ -3,6 +3,9 @@ package com.absinthe.libchecker.data.snapshot
 import com.absinthe.libchecker.database.entity.SnapshotItem
 import com.absinthe.libchecker.domain.snapshot.backup.archive.SnapshotArchiveCodec
 import com.absinthe.libchecker.protocol.Snapshot
+import com.absinthe.libchecker.utils.dex.DexEntryInfo
+import com.absinthe.libchecker.utils.dex.DexStatsCollector
+import com.absinthe.libchecker.utils.fromJson
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -39,11 +42,14 @@ class ProtoSnapshotArchiveCodec : SnapshotArchiveCodec {
       packageSize = this@toSnapshotMessage.packageSize
       compileSdk = this@toSnapshotMessage.compileSdk.toInt()
       minSdk = this@toSnapshotMessage.minSdk.toInt()
+      dexInfo = this@toSnapshotMessage.dexInfo
+      resourcesSize = this@toSnapshotMessage.resourcesSize
+      statsVersion = this@toSnapshotMessage.statsVersion
     }.build()
   }
 
   private fun Snapshot.toSnapshotItem(): SnapshotItem {
-    return SnapshotItem(
+    val restored = SnapshotItem(
       id = null,
       packageName = packageName,
       timeStamp = timeStamp,
@@ -65,7 +71,33 @@ class ProtoSnapshotArchiveCodec : SnapshotArchiveCodec {
       metadata = metadata,
       packageSize = packageSize,
       compileSdk = compileSdk.toShort(),
-      minSdk = minSdk.toShort()
+      minSdk = minSdk.toShort(),
+      dexInfo = dexInfo,
+      resourcesSize = resourcesSize,
+      statsVersion = statsVersion
     )
+    if (restored.statsVersion != SnapshotItem.CURRENT_STATS_VERSION) {
+      return restored.copy(
+        dexInfo = "[]",
+        resourcesSize = 0,
+        statsVersion = 0
+      )
+    }
+    val dexEntries = restored.dexInfo.fromJson<List<DexEntryInfo>>(
+      List::class.java,
+      DexEntryInfo::class.java
+    )
+    return if (
+      dexEntries != null &&
+      DexStatsCollector.isValidStoredStats(dexEntries, restored.resourcesSize)
+    ) {
+      restored
+    } else {
+      restored.copy(
+        dexInfo = "[]",
+        resourcesSize = 0,
+        statsVersion = 0
+      )
+    }
   }
 }

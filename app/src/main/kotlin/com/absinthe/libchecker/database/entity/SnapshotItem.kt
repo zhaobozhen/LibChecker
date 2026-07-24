@@ -29,5 +29,15 @@ data class SnapshotItem(
   val metadata: String,
   val packageSize: Long,
   val compileSdk: Short,
-  val minSdk: Short
-)
+  val minSdk: Short,
+  @ColumnInfo(defaultValue = "'[]'")
+  val dexInfo: String = "[]",
+  @ColumnInfo(defaultValue = "0")
+  val resourcesSize: Long = 0,
+  @ColumnInfo(defaultValue = "0")
+  val statsVersion: Int = 0
+) {
+  companion object {
+    const val CURRENT_STATS_VERSION = 1
+  }
+}

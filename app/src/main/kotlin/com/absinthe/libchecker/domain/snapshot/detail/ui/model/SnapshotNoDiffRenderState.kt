@@ -11,7 +11,8 @@ data class SnapshotNoDiffRenderState(
 enum class SnapshotNoDiffMode {
   New,
   Deleted,
-  NothingChanged
+  NothingChanged,
+  PackageChanges
 }
 
 data class SnapshotNoDiffTitleIconRenderState(
@@ -33,12 +34,32 @@ fun SnapshotDiffItem.toSnapshotNoDiffRenderState(
     newInstalled -> SnapshotNoDiffMode.New
     deleted -> SnapshotNoDiffMode.Deleted
     isNothingChanged() -> SnapshotNoDiffMode.NothingChanged
+    hasOnlyPackageStatsChanges() -> SnapshotNoDiffMode.PackageChanges
     else -> return null
   }
   return SnapshotNoDiffRenderState(
     title = title,
     mode = mode
   )
+}
+
+fun SnapshotDiffItem.hasOnlyPackageStatsChanges(): Boolean {
+  val hasPackageStatsChanges =
+    dexInfoDiff.hasChanged() || resourcesSizeDiff.hasChanged()
+  val hasComponentChanges = listOf(
+    nativeLibsDiff,
+    servicesDiff,
+    activitiesDiff,
+    receiversDiff,
+    providersDiff,
+    permissionsDiff,
+    metadataDiff
+  ).any { it.hasChanged() }
+  return hasPackageStatsChanges && !hasComponentChanges
+}
+
+private fun <T> SnapshotDiffItem.DiffNode<T>.hasChanged(): Boolean {
+  return new != null && new != old
 }
 
 fun SnapshotPackageIconSource?.toSnapshotNoDiffTitleIconRenderState(): SnapshotNoDiffTitleIconRenderState {

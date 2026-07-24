@@ -15,7 +15,10 @@ data class SnapshotSummaryItem(
   val targetApi: Short,
   val packageSize: Long,
   val compileSdk: Short,
-  val minSdk: Short
+  val minSdk: Short,
+  val dexInfo: String = "[]",
+  val resourcesSize: Long = 0,
+  val statsVersion: Int = 0
 ) {
   fun toSnapshotItem(): SnapshotItem {
     return SnapshotItem(
@@ -39,6 +42,9 @@ data class SnapshotSummaryItem(
       permissions = "",
       metadata = "",
       packageSize = packageSize,
+      dexInfo = dexInfo,
+      resourcesSize = resourcesSize,
+      statsVersion = statsVersion,
       compileSdk = compileSdk,
       minSdk = minSdk
     )

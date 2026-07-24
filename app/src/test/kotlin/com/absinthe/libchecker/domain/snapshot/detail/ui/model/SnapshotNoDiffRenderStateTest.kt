@@ -68,6 +68,35 @@ class SnapshotNoDiffRenderStateTest {
   }
 
   @Test
+  fun mapsPackageStatsOnlyChangeToPackageChangesMode() {
+    val title = titleRenderState()
+    val item = snapshotDiffItem().copy(
+      dexInfoDiff = SnapshotDiffItem.DiffNode("old dex", "new dex"),
+      resourcesSizeDiff = SnapshotDiffItem.DiffNode(10L, 20L),
+      changed = 2
+    )
+
+    assertEquals(
+      SnapshotNoDiffRenderState(
+        title = title,
+        mode = SnapshotNoDiffMode.PackageChanges
+      ),
+      item.toSnapshotNoDiffRenderState(title)
+    )
+  }
+
+  @Test
+  fun componentChangeWithPackageStatsStillNeedsDetailPage() {
+    val item = snapshotDiffItem().copy(
+      servicesDiff = SnapshotDiffItem.DiffNode("old service", "new service"),
+      dexInfoDiff = SnapshotDiffItem.DiffNode("old dex", "new dex"),
+      changed = 2
+    )
+
+    assertNull(item.toSnapshotNoDiffRenderState(titleRenderState()))
+  }
+
+  @Test
   fun disablesDetailClickForFallbackIconSource() {
     val state = SnapshotPackageIconSource.Fallback.toSnapshotNoDiffTitleIconRenderState()
 
