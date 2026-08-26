@@ -29,9 +29,6 @@
       window:primaryActivityName="com.absinthe.libchecker.domain.snapshot.detail.ui.SnapshotDetailActivity"
       window:secondaryActivityName="com.absinthe.libchecker.domain.app.detail.ui.AppDetailActivity" />
 
-    <SplitPairFilter
-      window:primaryActivityName="com.absinthe.libchecker.domain.snapshot.album.ui.AlbumActivity"
-      window:secondaryActivityName="com.absinthe.libchecker.domain.snapshot.track.ui.TrackActivity" />
   </SplitPairRule>
 
 </resources>

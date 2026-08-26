@@ -100,20 +100,12 @@
           tools:ignore="AppLinkUrlError" />
         <data android:pathPattern=".*\\.lcss" />
       </intent-filter>
-    </activity>
-    <activity
-      android:name=".domain.snapshot.comparison.ui.ComparisonActivity"
-      android:exported="true"
-      android:label="@string/album_item_comparison_title">
       <intent-filter>
         <action android:name="android.intent.action.SEND_MULTIPLE" />
         <category android:name="android.intent.category.DEFAULT" />
         <data android:mimeType="application/vnd.android.package-archive" />
       </intent-filter>
     </activity>
-    <activity
-      android:name=".domain.snapshot.track.ui.TrackActivity"
-      android:label="@string/album_item_track_title" />
     <activity
       android:name=".domain.statistics.reference.ui.LibReferenceActivity"
       android:configChanges="orientation"

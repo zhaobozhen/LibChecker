@@ -119,7 +119,10 @@ Important `:app` boundaries:
 - Repositories are centralized in `settings.gradle.kts`; do not add module-level
   repositories.
 - Prefer Kotlin for app code. Keep Java in existing Java-heavy parser/stub areas.
-- Use XML layouts and ViewBinding, not Jetpack Compose UI.
+- Use XML layouts and ViewBinding by default. Jetpack Compose UI is allowed only
+  for explicitly approved, self-contained vertical slices; keep View/Compose
+  interoperability scoped to the migrated feature until a broader migration is
+  approved.
 - Activities/fragments should follow existing `BaseActivity<VB>`,
   `BaseFragment<VB>`, and `IBinding` patterns.
 - Dependency injection uses Koin. Put app-wide bindings in `di/AppModule.kt`;

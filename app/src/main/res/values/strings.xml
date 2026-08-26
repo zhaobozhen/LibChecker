@@ -12,6 +12,8 @@
 
   <!--  App list  -->
   <string name="menu_search">Search</string>
+  <string name="navigate_up">Navigate up</string>
+  <string name="close_search">Close search</string>
   <string name="menu_sort">Sort</string>
   <string name="chart_statistics_add">Add statistics</string>
   <string name="chart_statistics_edit">Edit statistics</string>

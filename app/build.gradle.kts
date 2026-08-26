@@ -3,6 +3,7 @@ import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.parcelize)
+  alias(libs.plugins.compose.compiler)
   alias(libs.plugins.protobuf)
   alias(libs.plugins.hiddenApiRefine)
   alias(libs.plugins.ksp)
@@ -34,6 +35,7 @@ setupAppModule {
   buildFeatures {
     aidl = true
     buildConfig = true
+    compose = true
     viewBinding = true
   }
 
@@ -126,6 +128,7 @@ dependencies {
   implementation(libs.koin.android)
   implementation(libs.androidX.core)
   implementation(libs.androidX.activity)
+  implementation(libs.androidX.activity.compose)
   implementation(libs.androidX.fragment)
   implementation(libs.androidX.constraintLayout)
   implementation(libs.androidX.browser)
@@ -133,10 +136,16 @@ dependencies {
   implementation(libs.androidX.recyclerView)
   implementation(libs.androidX.preference)
   implementation(libs.androidX.window)
+  implementation(platform(libs.androidX.compose.bom))
+  implementation(libs.androidX.compose.ui)
+  implementation(libs.androidX.compose.ui.tooling.preview)
+  implementation(libs.androidX.compose.material3)
+  implementation(libs.androidX.lifecycle.runtime.compose)
   implementation(libs.bundles.androidX.lifecycle)
   implementation(libs.bundles.androidX.room3)
   implementation(libs.google.material)
   implementation(libs.coil)
+  implementation(libs.coil.compose)
   implementation(libs.coil.svg)
   implementation(libs.square.okHttp)
   implementation(libs.square.okio)
@@ -154,6 +163,12 @@ dependencies {
 
   androidTestImplementation(libs.androidX.test.ext.junit)
   androidTestImplementation(libs.androidX.test.runner)
+  androidTestImplementation(libs.androidX.espresso.core)
+  androidTestImplementation(platform(libs.androidX.compose.bom))
+  androidTestImplementation(libs.androidX.compose.ui.test.junit4)
+
+  debugImplementation(libs.androidX.compose.ui.tooling)
+  debugImplementation(libs.androidX.compose.ui.test.manifest)
 
   implementation(libs.aboutlibraries.core)
   implementation(libs.aboutlibraries.ui)

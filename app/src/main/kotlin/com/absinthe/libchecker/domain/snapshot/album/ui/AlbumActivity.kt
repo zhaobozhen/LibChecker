@@ -1,75 +1,122 @@
 package com.absinthe.libchecker.domain.snapshot.album.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Bundle
-import android.view.MenuItem
-import android.view.ViewGroup
+import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.graphics.createBitmap
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.database.backup.RoomBackup
-import com.absinthe.libchecker.databinding.ActivityAlbumBinding
+import com.absinthe.libchecker.database.entity.SnapshotItem
 import com.absinthe.libchecker.domain.home.ui.MainActivity
-import com.absinthe.libchecker.domain.snapshot.album.model.AlbumItemAction
-import com.absinthe.libchecker.domain.snapshot.album.model.AlbumItemDisplayData
-import com.absinthe.libchecker.domain.snapshot.album.model.buildAlbumItemDescription
-import com.absinthe.libchecker.domain.snapshot.album.ui.adapter.AlbumAdapter
 import com.absinthe.libchecker.domain.snapshot.backup.ui.SnapshotBackupBottomSheetDialogFragment
 import com.absinthe.libchecker.domain.snapshot.backup.ui.SnapshotRoomBackupOwner
-import com.absinthe.libchecker.domain.snapshot.comparison.ui.ComparisonActivity
+import com.absinthe.libchecker.domain.snapshot.comparison.model.ComparisonDashboardLabels
+import com.absinthe.libchecker.domain.snapshot.comparison.model.ComparisonDashboardState
+import com.absinthe.libchecker.domain.snapshot.comparison.model.SnapshotComparisonPlan
+import com.absinthe.libchecker.domain.snapshot.comparison.model.SnapshotComparisonSide
+import com.absinthe.libchecker.domain.snapshot.comparison.presentation.ComparisonShareIntentParser
+import com.absinthe.libchecker.domain.snapshot.comparison.presentation.SnapshotComparisonViewModel
+import com.absinthe.libchecker.domain.snapshot.comparison.ui.ComparisonResultItem
+import com.absinthe.libchecker.domain.snapshot.comparison.ui.ComparisonRouteScreen
+import com.absinthe.libchecker.domain.snapshot.comparison.ui.ComparisonRouteState
+import com.absinthe.libchecker.domain.snapshot.detail.ui.EXTRA_ENTITY
+import com.absinthe.libchecker.domain.snapshot.detail.ui.EXTRA_ICON
+import com.absinthe.libchecker.domain.snapshot.detail.ui.SnapshotDetailActivity
+import com.absinthe.libchecker.domain.snapshot.list.model.SnapshotItemCardPresentation
 import com.absinthe.libchecker.domain.snapshot.list.presentation.SnapshotViewModel
+import com.absinthe.libchecker.domain.snapshot.list.usecase.BuildSnapshotItemDisplayDataUseCase
+import com.absinthe.libchecker.domain.snapshot.list.usecase.GetSnapshotPackageIconSourcesUseCase
+import com.absinthe.libchecker.domain.snapshot.model.SnapshotDiffItem
 import com.absinthe.libchecker.domain.snapshot.timenode.ui.TimeNodeBottomSheetDialogFragment
-import com.absinthe.libchecker.domain.snapshot.track.ui.TrackActivity
-import com.absinthe.libchecker.ui.base.BaseActivity
+import com.absinthe.libchecker.domain.snapshot.track.presentation.TrackViewModel
+import com.absinthe.libchecker.domain.snapshot.track.ui.TrackRouteScreen
 import com.absinthe.libchecker.ui.base.BaseAlertDialogBuilder
+import com.absinthe.libchecker.ui.base.BaseComposeActivity
+import com.absinthe.libchecker.ui.compose.LibCheckerTheme
+import com.absinthe.libchecker.utils.UiUtils
 import com.absinthe.libchecker.utils.extensions.addBackStateHandler
-import com.absinthe.libchecker.utils.extensions.applySystemBarsPadding
-import com.absinthe.libraries.utils.utils.AntiShakeUtils
-import com.absinthe.libraries.utils.utils.UiUtils
+import com.absinthe.libchecker.utils.extensions.dp
+import com.absinthe.libchecker.utils.extensions.getColorByAttr
+import com.absinthe.libchecker.utils.extensions.requireAvailableCacheDir
+import com.absinthe.libchecker.utils.showToast
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import rikka.widget.borderview.BorderView
 import timber.log.Timber
 
 class AlbumActivity :
-  BaseActivity<ActivityAlbumBinding>(),
+  BaseComposeActivity(),
   SnapshotRoomBackupOwner {
 
-  private val viewModel: SnapshotViewModel by viewModel()
-  private val adapter = AlbumAdapter()
+  private val snapshotViewModel: SnapshotViewModel by viewModel()
+  private val comparisonViewModel: SnapshotComparisonViewModel by viewModel()
+  private val trackViewModel: TrackViewModel by viewModel()
+  private val buildSnapshotItemDisplayData: BuildSnapshotItemDisplayDataUseCase by inject()
+  private val getSnapshotPackageIconSources: GetSnapshotPackageIconSourcesUseCase by inject()
+
   override val snapshotRoomBackup = RoomBackup(this)
+
+  private var route by mutableStateOf(AlbumRoute.Home)
+  private var comparisonState by mutableStateOf<ComparisonRouteState?>(null)
+  private var comparisonItems = emptyList<SnapshotDiffItem>()
+  private lateinit var comparisonLabels: ComparisonDashboardLabels
+  private lateinit var chooseApkResultLauncher: ActivityResultLauncher<Array<String>>
+  private var archiveChoosingSide = SnapshotComparisonSide.LEFT
   private var pendingRestoreUri: Uri? = null
+
   private val fragmentLifecycleCallbacks =
     object : FragmentManager.FragmentLifecycleCallbacks() {
       override fun onFragmentDetached(fragmentManager: FragmentManager, fragment: Fragment) {
         if (fragment is SnapshotBackupBottomSheetDialogFragment) {
-          binding.root.post(::dispatchPendingRestoreUri)
+          window.decorView.post(::dispatchPendingRestoreUri)
         }
       }
     }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentLifecycleCallbacks, false)
-    initView()
-    if (
-      savedInstanceState == null &&
-      intent?.action == Intent.ACTION_VIEW &&
-      intent?.data != null
-    ) {
-      showBackupBottomSheet(intent.data)
+    comparisonLabels = ComparisonDashboardLabels(
+      timestampTitle = getString(R.string.snapshot_current_timestamp),
+      chooseTimestampText = getString(R.string.album_click_to_choose),
+      appsCountTitle = getString(R.string.comparison_snapshot_apps_count),
+      defaultAppsCountText = DEFAULT_DASHBOARD_APPS_COUNT
+    )
+    route = savedInstanceState
+      ?.getString(STATE_ROUTE)
+      ?.let { savedRoute -> AlbumRoute.entries.find { it.name == savedRoute } }
+      ?: AlbumRoute.Home
+    if (route == AlbumRoute.Track) {
+      trackViewModel.loadTrackList()
+    } else if (route == AlbumRoute.Comparison) {
+      invalidateComparisonDashboard()
     }
+    registerComparisonCallbacks()
+    registerComparisonObservers()
+    supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentLifecycleCallbacks, false)
+    renderComposeContent()
+    handleIntent(intent, isInitial = savedInstanceState == null)
     onBackPressedDispatcher.addBackStateHandler(
       lifecycleOwner = this,
       enabledState = {
-        intent?.action == Intent.ACTION_VIEW && intent?.data != null
+        route == AlbumRoute.Home && intent?.action == Intent.ACTION_VIEW && intent?.data != null
       },
       handler = {
         startActivity(
@@ -84,12 +131,12 @@ class AlbumActivity :
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
-    if (intent.action != Intent.ACTION_VIEW) {
-      return
-    }
-    val restoreUri = intent.data ?: return
-    pendingRestoreUri = restoreUri
-    dispatchPendingRestoreUri()
+    handleIntent(intent, isInitial = false)
+  }
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    outState.putString(STATE_ROUTE, route.name)
+    super.onSaveInstanceState(outState)
   }
 
   override fun onResumeFragments() {
@@ -99,7 +146,364 @@ class AlbumActivity :
 
   override fun onDestroy() {
     supportFragmentManager.unregisterFragmentLifecycleCallbacks(fragmentLifecycleCallbacks)
+    comparisonViewModel.clearSnapshotComparisonArchiveCache(externalCacheDir)
     super.onDestroy()
+  }
+
+  private fun renderComposeContent() {
+    setContent {
+      LibCheckerTheme {
+        val trackState by trackViewModel.uiState.collectAsStateWithLifecycle()
+        AlbumRouteHost(
+          route = route,
+          onNavigateHome = ::navigateHome
+        ) { targetRoute ->
+          when (targetRoute) {
+            AlbumRoute.Home,
+            AlbumRoute.Management,
+            AlbumRoute.BackupRestore -> AlbumHomeRoute(
+              onNavigate = ::handleAlbumEntry,
+              onNavigateUp = onBackPressedDispatcher::onBackPressed
+            )
+
+            AlbumRoute.Comparison -> comparisonState?.let { state ->
+              ComparisonRouteScreen(
+                state = state,
+                onNavigateUp = ::navigateHome,
+                onSelectSide = ::showTimeNodePicker,
+                onCompare = ::compareSelectedItems,
+                onResultClick = ::navigateToComparisonResult
+              )
+            }
+
+            AlbumRoute.Track -> TrackRouteScreen(
+              state = trackState,
+              onQueryChanged = trackViewModel::setQuery,
+              onTrackedChange = trackViewModel::setPackageTracked,
+              onNavigateUp = ::navigateHome
+            )
+          }
+        }
+      }
+    }
+  }
+
+  private fun handleAlbumEntry(route: AlbumRoute) {
+    when (route) {
+      AlbumRoute.Comparison -> openComparison()
+
+      AlbumRoute.Management -> showSnapshotManagementDialog()
+
+      AlbumRoute.BackupRestore -> showBackupBottomSheet()
+
+      AlbumRoute.Track -> {
+        this.route = AlbumRoute.Track
+        trackViewModel.loadTrackList()
+      }
+
+      AlbumRoute.Home -> navigateHome()
+    }
+  }
+
+  private fun navigateHome() {
+    route = AlbumRoute.Home
+    trackViewModel.setQuery("")
+  }
+
+  private fun openComparison() {
+    route = AlbumRoute.Comparison
+    invalidateComparisonDashboard()
+  }
+
+  private fun registerComparisonCallbacks() {
+    chooseApkResultLauncher =
+      registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) {
+          return@registerForActivityResult
+        }
+        comparisonViewModel.selectArchive(archiveChoosingSide, uri)
+        invalidateComparisonDashboard()
+      }
+  }
+
+  private fun registerComparisonObservers() {
+    comparisonViewModel.snapshotDiffItemsFlow.onEach { items ->
+      comparisonItems = items
+      val iconSources = getSnapshotPackageIconSources(items.map(SnapshotDiffItem::packageName))
+      val displayItems = items.mapIndexed { index, item ->
+        ComparisonResultItem(
+          key = "${item.packageName}:${item.updateTime}:$index",
+          displayData = buildSnapshotItemDisplayData(
+            BuildSnapshotItemDisplayDataUseCase.Request(
+              item = item,
+              cardPresentation = SnapshotItemCardPresentation.Normal,
+              iconSource = iconSources[item.packageName],
+              showUpdateTime = false,
+              isApexPackage = false,
+              animateStateIndicator = false,
+              tintChangedAbiBadge = false,
+              highlightDiffColor = getColorByAttr(androidx.appcompat.R.attr.colorPrimary),
+              emphasizeDiffs = true,
+              highlightText = ""
+            )
+          ),
+          onClickToken = index
+        )
+      }
+      comparisonState = currentComparisonState().copy(
+        items = displayItems,
+        isLoading = false,
+        hasCompared = true
+      )
+    }.launchIn(lifecycleScope)
+
+    comparisonViewModel.effect.onEach { effect ->
+      when (effect) {
+        is SnapshotComparisonViewModel.Effect.DashboardCountChange -> {
+          val side = SnapshotComparisonSide.fromIsLeft(effect.isLeft)
+          val state = currentComparisonState()
+          comparisonState = state.copy(
+            dashboard = state.dashboard.withAppsCountText(
+              side = side,
+              appsCountText = effect.snapshotCount.toString(),
+              labels = comparisonLabels
+            )
+          )
+        }
+      }
+    }.launchIn(lifecycleScope)
+  }
+
+  private fun currentComparisonState(): ComparisonRouteState {
+    return comparisonState ?: ComparisonRouteState(
+      dashboard = comparisonViewModel.buildDashboardState(comparisonLabels)
+    )
+  }
+
+  private fun invalidateComparisonDashboard() {
+    val dashboard = comparisonViewModel.buildDashboardState(comparisonLabels)
+    comparisonState = currentComparisonState().copy(dashboard = dashboard)
+    requestDashboardCount(dashboard, SnapshotComparisonSide.LEFT)
+    requestDashboardCount(dashboard, SnapshotComparisonSide.RIGHT)
+  }
+
+  private fun requestDashboardCount(
+    dashboard: ComparisonDashboardState,
+    side: SnapshotComparisonSide
+  ) {
+    dashboard.getSide(side).dashboardCountTimestamp?.let {
+      comparisonViewModel.getDashboardCount(it, side == SnapshotComparisonSide.LEFT)
+    }
+  }
+
+  private fun showTimeNodePicker(side: SnapshotComparisonSide) {
+    lifecycleScope.launch(Dispatchers.IO) {
+      val timeStampList = comparisonViewModel.getTimeStamps()
+      withContext(Dispatchers.Main) {
+        TimeNodeBottomSheetDialogFragment
+          .newInstance(ArrayList(timeStampList))
+          .apply {
+            setCompareMode(true)
+            setLeftMode(side == SnapshotComparisonSide.LEFT)
+            setOnAddApkClickListener { isLeft ->
+              archiveChoosingSide = SnapshotComparisonSide.fromIsLeft(isLeft)
+              chooseApkResultLauncher.launch(
+                arrayOf("application/vnd.android.package-archive", "application/octet-stream")
+              )
+            }
+            setOnItemClickListener { position ->
+              val item = timeStampList.getOrNull(position) ?: return@setOnItemClickListener
+              comparisonViewModel.selectSnapshot(side, item.timestamp)
+              invalidateComparisonDashboard()
+              dismiss()
+            }
+          }
+          .show(supportFragmentManager, TimeNodeBottomSheetDialogFragment::class.java.name)
+      }
+    }
+  }
+
+  private fun compareSelectedItems() {
+    if (comparisonState?.isLoading == true) {
+      return
+    }
+    if (!comparisonViewModel.canCompare()) {
+      showToast(R.string.album_item_comparison_invalid_compare)
+      return
+    }
+    lifecycleScope.launch(Dispatchers.IO) {
+      withContext(Dispatchers.Main) {
+        comparisonState = currentComparisonState().copy(isLoading = true)
+      }
+      val compareAction = comparisonViewModel.buildCompareAction(
+        cacheDir = requireAvailableCacheDir(),
+        iconSize = resources.getDimensionPixelSize(R.dimen.lib_detail_icon_size)
+      )
+      withContext(Dispatchers.Main) {
+        if (compareAction.hasNotEnoughStorageSpace) {
+          showToast(R.string.toast_not_enough_storage_space)
+        }
+      }
+      when (compareAction) {
+        is SnapshotComparisonViewModel.CompareAction.Invalid -> withContext(Dispatchers.Main) {
+          comparisonState = currentComparisonState().copy(isLoading = false)
+          showToast(R.string.album_item_comparison_invalid_compare)
+        }
+
+        is SnapshotComparisonViewModel.CompareAction.Ready -> handleComparePlan(compareAction.plan)
+      }
+    }
+  }
+
+  private suspend fun handleComparePlan(plan: SnapshotComparisonPlan) {
+    when (plan) {
+      is SnapshotComparisonPlan.TimestampRange -> comparisonViewModel.compareDiff(
+        plan.previousTimestamp,
+        plan.currentTimestamp
+      )
+
+      is SnapshotComparisonPlan.SnapshotLists -> comparisonViewModel.compareDiffWithSnapshotList(
+        plan.lists.left,
+        plan.lists.right
+      )
+
+      is SnapshotComparisonPlan.ArchivePair -> withContext(Dispatchers.Main) {
+        comparisonState = currentComparisonState().copy(isLoading = false)
+        showArchiveComparison(plan)
+      }
+    }
+  }
+
+  private fun showArchiveComparison(plan: SnapshotComparisonPlan.ArchivePair) {
+    if (plan.requiresDifferentPackageConfirmation) {
+      BaseAlertDialogBuilder(this)
+        .setTitle(R.string.dialog_title_compare_diff_apk)
+        .setMessage(R.string.dialog_message_compare_diff_apk)
+        .setPositiveButton(android.R.string.ok) { _, _ ->
+          navigateToSnapshotDetail(
+            plan.left.snapshotItem,
+            plan.right.snapshotItem,
+            plan.left.icon,
+            plan.right.icon
+          )
+        }
+        .setNegativeButton(android.R.string.cancel, null)
+        .show()
+    } else {
+      navigateToSnapshotDetail(
+        plan.left.snapshotItem,
+        plan.right.snapshotItem,
+        plan.left.icon,
+        plan.right.icon
+      )
+    }
+  }
+
+  private fun navigateToComparisonResult(position: Int) {
+    val item = comparisonItems.getOrNull(position) ?: return
+    startActivity(
+      Intent(this, SnapshotDetailActivity::class.java)
+        .putExtra(EXTRA_ENTITY, item)
+    )
+  }
+
+  private fun navigateToSnapshotDetail(
+    left: SnapshotItem,
+    right: SnapshotItem,
+    leftIcon: Bitmap,
+    rightIcon: Bitmap
+  ) {
+    startActivity(
+      Intent(this, SnapshotDetailActivity::class.java)
+        .putExtras(
+          Bundle().apply {
+            putSerializable(EXTRA_ENTITY, comparisonViewModel.buildSnapshotPairDiff(left, right))
+            putParcelable(EXTRA_ICON, getIconsCombo(leftIcon, rightIcon))
+          }
+        )
+    )
+  }
+
+  private fun getIconsCombo(leftIconOrigin: Bitmap, rightIconOrigin: Bitmap): Bitmap {
+    val iconSize = resources.getDimensionPixelSize(R.dimen.lib_detail_icon_size)
+    val leftIcon = Bitmap.createBitmap(
+      leftIconOrigin,
+      0,
+      0,
+      leftIconOrigin.width / 2,
+      leftIconOrigin.height
+    )
+    val rightIcon = Bitmap.createBitmap(
+      rightIconOrigin,
+      rightIconOrigin.width / 2,
+      0,
+      rightIconOrigin.width / 2,
+      rightIconOrigin.height
+    )
+    val comboIcon = createBitmap(iconSize, iconSize)
+    val isSameIcon = leftIconOrigin.sameAs(rightIconOrigin)
+    Canvas(comboIcon).apply {
+      drawBitmap(leftIcon, 0f, 0f, null)
+      drawBitmap(rightIcon, iconSize / 2f, 0f, null)
+      if (!isSameIcon) {
+        drawLine(
+          iconSize / 2f,
+          0f,
+          iconSize / 2f,
+          iconSize.toFloat(),
+          Paint().apply {
+            color = getColorByAttr(com.google.android.material.R.attr.colorOnSurface)
+            strokeWidth = 2.dp.toFloat()
+          }
+        )
+      }
+    }
+    return comboIcon
+  }
+
+  private fun handleIntent(intent: Intent?, isInitial: Boolean) {
+    if (intent == null) {
+      return
+    }
+    when (intent.action) {
+      Intent.ACTION_VIEW -> {
+        val restoreUri = intent.data ?: return
+        if (isInitial) {
+          showBackupBottomSheet(restoreUri)
+        } else {
+          pendingRestoreUri = restoreUri
+          dispatchPendingRestoreUri()
+        }
+      }
+
+      Intent.ACTION_SEND_MULTIPLE -> {
+        openComparison()
+        parseComparisonIntent(intent)
+      }
+    }
+  }
+
+  private fun parseComparisonIntent(intent: Intent) {
+    when (val result = ComparisonShareIntentParser.parse(intent)) {
+      ComparisonShareIntentParser.Result.None -> Unit
+
+      ComparisonShareIntentParser.Result.InvalidSharedItems ->
+        showToast(R.string.album_item_comparison_invalid_shared_items)
+
+      is ComparisonShareIntentParser.Result.PackagePair -> {
+        result.leftUri?.let {
+          comparisonViewModel.selectArchive(SnapshotComparisonSide.LEFT, it)
+        }
+        result.rightUri?.let {
+          comparisonViewModel.selectArchive(SnapshotComparisonSide.RIGHT, it)
+        }
+        repeat(result.invalidItemCount) {
+          showToast(R.string.album_item_comparison_invalid_shared_items)
+        }
+        invalidateComparisonDashboard()
+        compareSelectedItems()
+      }
+    }
   }
 
   private fun dispatchPendingRestoreUri() {
@@ -121,100 +525,6 @@ class AlbumActivity :
     }
   }
 
-  private fun initView() {
-    setSupportActionBar(binding.toolbar)
-    (binding.root as ViewGroup).bringChildToFront(binding.appbar)
-    supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    binding.toolbar.title = getString(R.string.title_album)
-
-    val isDarkMode = UiUtils.isDarkMode()
-    val albumItems = listOf(
-      generateAlbumItemDisplayData(
-        R.drawable.ic_compare,
-        if (isDarkMode) R.color.material_red_900 else R.color.material_red_300,
-        R.string.album_item_comparison_title,
-        R.string.album_item_comparison_subtitle,
-        AlbumItemAction.Comparison
-      ),
-      generateAlbumItemDisplayData(
-        R.drawable.ic_manage,
-        if (isDarkMode) R.color.material_blue_900 else R.color.material_blue_300,
-        R.string.album_item_management_title,
-        R.string.album_item_management_subtitle,
-        AlbumItemAction.Management
-      ),
-      generateAlbumItemDisplayData(
-        R.drawable.ic_backup,
-        if (isDarkMode) R.color.material_green_900 else R.color.material_green_300,
-        R.string.album_item_backup_restore_title,
-        R.string.album_item_backup_restore_subtitle,
-        AlbumItemAction.BackupRestore
-      ),
-      generateAlbumItemDisplayData(
-        R.drawable.ic_track,
-        if (isDarkMode) R.color.material_orange_900 else R.color.material_orange_300,
-        R.string.album_item_track_title,
-        R.string.album_item_track_subtitle,
-        AlbumItemAction.Track
-      )
-    )
-    binding.llContainer.apply {
-      overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-      adapter = this@AlbumActivity.adapter
-      applySystemBarsPadding(top = true, bottom = true)
-      borderVisibilityChangedListener =
-        BorderView.OnBorderVisibilityChangedListener { top: Boolean, _: Boolean, _: Boolean, _: Boolean ->
-          binding.appbar.isLifted = !top
-        }
-      layoutManager = LinearLayoutManager(context)
-      isVerticalScrollBarEnabled = false
-      clipToPadding = false
-      clipChildren = false
-      setHasFixedSize(true)
-
-      this@AlbumActivity.adapter.apply {
-        setList(albumItems)
-        setOnItemClickListener { _, view, position ->
-          if (AntiShakeUtils.isInvalidClick(view)) {
-            return@setOnItemClickListener
-          }
-          when (getItem(position).action) {
-            AlbumItemAction.Comparison -> startActivity(Intent(this@AlbumActivity, ComparisonActivity::class.java))
-            AlbumItemAction.Management -> showSnapshotManagementDialog()
-            AlbumItemAction.BackupRestore -> showBackupBottomSheet()
-            AlbumItemAction.Track -> startActivity(Intent(this@AlbumActivity, TrackActivity::class.java))
-          }
-        }
-      }
-    }
-  }
-
-  override fun onOptionsItemSelected(item: MenuItem): Boolean {
-    if (item.itemId == android.R.id.home) {
-      onBackPressedDispatcher.onBackPressed()
-    }
-    return super.onOptionsItemSelected(item)
-  }
-
-  private fun generateAlbumItemDisplayData(
-    iconRes: Int,
-    iconBackgroundColorRes: Int,
-    titleRes: Int,
-    subtitleRes: Int,
-    action: AlbumItemAction
-  ): AlbumItemDisplayData {
-    val title = getString(titleRes)
-    val subtitle = getString(subtitleRes)
-    return AlbumItemDisplayData(
-      iconRes = iconRes,
-      iconBackgroundColorRes = iconBackgroundColorRes,
-      title = title,
-      subtitle = subtitle,
-      contentDescription = buildAlbumItemDescription(title, subtitle),
-      action = action
-    )
-  }
-
   private fun showBackupBottomSheet(restoreUri: Uri? = null): Boolean {
     val tag = SnapshotBackupBottomSheetDialogFragment::class.java.name
     if (supportFragmentManager.findFragmentByTag(tag) != null) {
@@ -229,38 +539,32 @@ class AlbumActivity :
 
   private fun showSnapshotManagementDialog() {
     lifecycleScope.launch(Dispatchers.IO) {
-      val timeStampList = viewModel.getTimeStamps().toMutableList()
+      val timeStampList = snapshotViewModel.getTimeStamps().toMutableList()
       withContext(Dispatchers.Main) {
         val dialog = TimeNodeBottomSheetDialogFragment
           .newInstance(ArrayList(timeStampList)).apply {
             setTitle(this@AlbumActivity.getString(R.string.dialog_title_select_to_delete))
             setOnItemClickListener { position ->
-              if (position >= timeStampList.size) {
-                return@setOnItemClickListener
-              }
-              val item = timeStampList[position]
+              val item = timeStampList.getOrNull(position) ?: return@setOnItemClickListener
               BaseAlertDialogBuilder(this@AlbumActivity)
                 .setTitle(R.string.dialog_title_confirm_to_delete)
                 .setMessage(
                   getString(
                     R.string.dialog_message_confirm_to_delete,
-                    viewModel.getFormatDateString(item.timestamp)
+                    snapshotViewModel.getFormatDateString(item.timestamp)
                   )
                 )
                 .setPositiveButton(R.string.dialog_action_delete) { _, _ ->
                   lifecycleScope.launch(Dispatchers.IO) {
-                    val dialog: AlertDialog
-                    withContext(Dispatchers.Main) {
-                      dialog = com.absinthe.libchecker.utils.UiUtils.createLoadingDialog(this@AlbumActivity)
-                      dialog.show()
+                    val loadingDialog: AlertDialog = withContext(Dispatchers.Main) {
+                      UiUtils.createLoadingDialog(this@AlbumActivity).also { it.show() }
                     }
-                    val remainingTimeStamps = viewModel.deleteSnapshotTimeStamp(item.timestamp)
+                    val remaining = snapshotViewModel.deleteSnapshotTimeStamp(item.timestamp)
                     timeStampList.clear()
-                    timeStampList.addAll(remainingTimeStamps)
+                    timeStampList.addAll(remaining)
                     withContext(Dispatchers.Main) {
                       removeItem(position)
-                      dialog.dismiss()
-
+                      loadingDialog.dismiss()
                       if (timeStampList.isEmpty()) {
                         dismiss()
                       }
@@ -274,5 +578,10 @@ class AlbumActivity :
         dialog.show(supportFragmentManager, TimeNodeBottomSheetDialogFragment::class.java.name)
       }
     }
+  }
+
+  private companion object {
+    const val DEFAULT_DASHBOARD_APPS_COUNT = "0"
+    const val STATE_ROUTE = "album_route"
   }
 }
