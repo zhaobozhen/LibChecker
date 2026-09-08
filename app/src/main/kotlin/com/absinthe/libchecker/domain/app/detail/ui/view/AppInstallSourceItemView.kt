@@ -4,10 +4,9 @@ import android.content.Context
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.appcompat.widget.AppCompatTextView
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
-import androidx.core.view.marginTop
 import coil.load
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.model.AppInstallSourceAction
@@ -17,14 +16,14 @@ import com.absinthe.libchecker.domain.app.detail.ui.binder.RelatedAppItemBinder
 import com.absinthe.libchecker.domain.app.list.ui.view.AppItemView
 import com.absinthe.libchecker.utils.extensions.applyCondensedSingleLine
 import com.absinthe.libchecker.utils.extensions.applySingleLineEndEllipsize
+import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.utils.extensions.getColorByAttr
 import com.absinthe.libchecker.utils.extensions.getColorStateListByAttr
-import com.absinthe.libchecker.view.AViewGroup
 
 class AppInstallSourceItemView(
   context: Context,
   initialTitle: CharSequence = ""
-) : AViewGroup(context) {
+) : LinearLayout(context) {
 
   private val relatedAppItemBinder = RelatedAppItemBinder()
 
@@ -54,6 +53,7 @@ class AppInstallSourceItemView(
   }
 
   init {
+    orientation = VERTICAL
     addView(titleView)
     addView(packageView)
   }
@@ -113,29 +113,5 @@ class AppInstallSourceItemView(
       packageName.applySingleLineEndEllipsize()
       versionInfo.applyCondensedSingleLine()
     }
-  }
-
-  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    val parent = parent as ViewGroup
-    super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-    titleView.autoMeasure()
-    packageView.let {
-      it.measure(
-        (measuredWidth - parent.paddingStart - parent.paddingEnd).toExactlyMeasureSpec(),
-        if (it.isGone) 0 else it.defaultHeightMeasureSpec(parent)
-      )
-    }
-    setMeasuredDimension(
-      measuredWidth,
-      titleView.marginTop +
-        titleView.measuredHeight +
-        packageView.marginTop +
-        packageView.measuredHeight
-    )
-  }
-
-  override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-    titleView.layout(paddingStart, titleView.marginTop)
-    packageView.layout(paddingStart, titleView.bottom + packageView.marginTop)
   }
 }

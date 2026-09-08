@@ -17,7 +17,10 @@ import com.absinthe.libchecker.annotation.SERVICE
 import com.absinthe.libchecker.database.RulesRepository
 import com.absinthe.libchecker.domain.app.detail.model.LibStringItem
 import com.absinthe.libchecker.domain.app.repository.AppListSettingsRepository
-import com.absinthe.libchecker.domain.snapshot.comparison.usecase.SnapshotNameIndex
+import com.absinthe.libchecker.domain.snapshot.comparison.usecase.visitComponentSnapshotDiff
+import com.absinthe.libchecker.domain.snapshot.comparison.usecase.visitKeyedSnapshotDiff
+import com.absinthe.libchecker.domain.snapshot.comparison.usecase.visitNamedSnapshotDiff
+import com.absinthe.libchecker.domain.snapshot.comparison.usecase.visitSetSnapshotDiff
 import com.absinthe.libchecker.domain.snapshot.detail.model.SNAPSHOT_DETAIL_DIFF_ARROW
 import com.absinthe.libchecker.domain.snapshot.detail.model.SnapshotDetailDiffTextStyle
 import com.absinthe.libchecker.domain.snapshot.detail.model.SnapshotDetailItemDisplayData
@@ -307,261 +310,101 @@ class SnapshotDetailSectionBuilder(
   private fun getNativeDiffList(
     oldList: List<LibStringItem>,
     newList: List<LibStringItem>?
-  ): List<SnapshotDetailItem> {
-    val list = mutableListOf<SnapshotDetailItem>()
-    if (newList == null) {
-      return list
-    }
-
-    val index = SnapshotNameIndex(oldList)
-    val addedItems = mutableListOf<LibStringItem>()
-
-    for (item in newList) {
-      val old = index.match(item.name)
-      if (old == null) {
-        addedItems.add(item)
-        continue
-      }
-      old.let {
-        if (it.size != item.size) {
-          val diffSize = item.size - it.size
-          val extra = buildString {
-            append("${it.size.sizeToString(context)} $ARROW ${item.size.sizeToString(context)}")
-            appendLine()
-            append(formatSnapshotSizeChange(context, diffSize, it.size))
-          }
-          list.add(
-            SnapshotDetailItem(
-              it.name,
-              it.name,
-              extra,
-              CHANGED,
-              NATIVE
-            )
-          )
+  ): List<SnapshotDetailItem> = buildList {
+    if (newList == null) return@buildList
+    visitNamedSnapshotDiff(oldList, newList, { old, new -> old.size != new.size }) { status, old, new ->
+      val item = old ?: requireNotNull(new)
+      val extra = if (old != null && new != null) {
+        buildString {
+          append("${old.size.sizeToString(context)} $ARROW ${new.size.sizeToString(context)}")
+          appendLine()
+          append(formatSnapshotSizeChange(context, new.size - old.size, old.size))
         }
+      } else {
+        PackageUtils.sizeToString(context, item)
       }
+      add(SnapshotDetailItem(item.name, item.name, extra, status, NATIVE))
     }
-
-    for (item in index.remainingItems()) {
-      list.add(
-        SnapshotDetailItem(
-          item.name,
-          item.name,
-          PackageUtils.sizeToString(context, item),
-          REMOVED,
-          NATIVE
-        )
-      )
-    }
-    for (item in addedItems) {
-      list.add(
-        SnapshotDetailItem(
-          item.name,
-          item.name,
-          PackageUtils.sizeToString(context, item),
-          ADDED,
-          NATIVE
-        )
-      )
-    }
-
-    return list
   }
 
   private fun getComponentsDiffList(
     oldSet: Set<String>,
     newSet: Set<String>?,
     @LibType type: Int
-  ): List<SnapshotDetailItem> {
-    val list = mutableListOf<SnapshotDetailItem>()
-
-    if (newSet == null) {
-      return emptyList()
-    }
-
-    val removeList = (oldSet - newSet).toMutableSet()
-    val addList = (newSet - oldSet).toMutableSet()
-
-    val pendingRemovedOldSet = mutableSetOf<String>()
-    val pendingRemovedNewSet = mutableSetOf<String>()
-
-    val firstRemovedByShortName = removeList.reversed().associateBy { it.substringAfterLast(".") }
-    for (item in addList) {
-      firstRemovedByShortName[item.substringAfterLast(".")]?.let {
-        list.add(
-          SnapshotDetailItem(
-            name = item,
-            title = String.format("%s\n$ARROW\n%s", it, item),
-            extra = "",
-            diffType = MOVED,
-            itemType = type,
-            previousName = it
-          )
+  ): List<SnapshotDetailItem> = buildList {
+    if (newSet == null) return@buildList
+    visitComponentSnapshotDiff(oldSet, newSet) { status, old, new ->
+      val name = new ?: requireNotNull(old)
+      add(
+        SnapshotDetailItem(
+          name = name,
+          title = if (status == MOVED) String.format("%s\n$ARROW\n%s", old, new) else name,
+          extra = "",
+          diffType = status,
+          itemType = type,
+          previousName = old.takeIf { status == MOVED }
         )
-        pendingRemovedOldSet.add(it)
-        pendingRemovedNewSet.add(item)
-      }
-    }
-    removeList.removeAll(pendingRemovedOldSet)
-    addList.removeAll(pendingRemovedNewSet)
-
-    removeList.forEach {
-      list.add(
-        SnapshotDetailItem(it, it, "", REMOVED, type)
       )
     }
-    addList.forEach {
-      list.add(
-        SnapshotDetailItem(it, it, "", ADDED, type)
-      )
-    }
-
-    return list
   }
 
   private fun getPermissionsDiffList(
     oldSet: Set<String>,
     newSet: Set<String>?
-  ): List<SnapshotDetailItem> {
-    val list = mutableListOf<SnapshotDetailItem>()
-
-    if (newSet == null) {
-      return emptyList()
+  ): List<SnapshotDetailItem> = buildList {
+    if (newSet == null) return@buildList
+    visitSetSnapshotDiff(oldSet, newSet) { status, old, new ->
+      val name = new ?: requireNotNull(old)
+      add(SnapshotDetailItem(name, name, "", status, PERMISSION))
     }
-
-    val removeList = oldSet - newSet
-    val addList = newSet - oldSet
-
-    removeList.forEach {
-      list.add(
-        SnapshotDetailItem(it, it, "", REMOVED, PERMISSION)
-      )
-    }
-    addList.forEach {
-      list.add(
-        SnapshotDetailItem(it, it, "", ADDED, PERMISSION)
-      )
-    }
-
-    return list
   }
 
   private fun getMetadataDiffList(
     oldList: List<LibStringItem>,
     newList: List<LibStringItem>?
-  ): List<SnapshotDetailItem> {
-    val list = mutableListOf<SnapshotDetailItem>()
-
-    if (newList == null) {
-      return list
-    }
-
-    val index = SnapshotNameIndex(oldList)
-    val addedItems = mutableListOf<LibStringItem>()
-
-    for (item in newList) {
-      val old = index.match(item.name)
-      if (old == null) {
-        addedItems.add(item)
-        continue
+  ): List<SnapshotDetailItem> = buildList {
+    if (newList == null) return@buildList
+    visitNamedSnapshotDiff(oldList, newList, { old, new -> old.source != new.source }) { status, old, new ->
+      val item = old ?: requireNotNull(new)
+      val extra = if (old != null && new != null) {
+        "${old.source.orEmpty()} $ARROW ${new.source.orEmpty()}"
+      } else {
+        item.source.orEmpty()
       }
-      old.let {
-        if (it.source != item.source) {
-          val extra =
-            "${it.source.orEmpty()} $ARROW ${item.source.orEmpty()}"
-          list.add(
-            SnapshotDetailItem(
-              it.name,
-              it.name,
-              extra,
-              CHANGED,
-              METADATA
-            )
-          )
-        }
-      }
+      add(SnapshotDetailItem(item.name, item.name, extra, status, METADATA))
     }
-
-    for (item in index.remainingItems()) {
-      list.add(
-        SnapshotDetailItem(item.name, item.name, item.source.orEmpty(), REMOVED, METADATA)
-      )
-    }
-    for (item in addedItems) {
-      list.add(
-        SnapshotDetailItem(item.name, item.name, item.source.orEmpty(), ADDED, METADATA)
-      )
-    }
-
-    return list
   }
 
   private fun getDexDiffList(
     oldList: List<DexEntryInfo>,
     newList: List<DexEntryInfo>?
-  ): List<SnapshotDetailItem> {
-    val list = mutableListOf<SnapshotDetailItem>()
-    if (newList == null) return list
-
+  ): List<SnapshotDetailItem> = buildList {
+    if (newList == null) return@buildList
     val oldByName = oldList.associateBy { it.name }
     val newByName = newList.associateBy { it.name }
     val hasSplitSource = (oldByName.keys + newByName.keys).any { it.startsWith("split:") }
-
-    for ((name, newEntry) in newByName) {
-      val oldEntry = oldByName[name]
-      val displayName = buildDexDisplayName(name, hasSplitSource)
-      if (oldEntry == null) {
-        list.add(
-          SnapshotDetailItem(
-            name = name,
-            title = displayName,
-            extra = buildDexExtra(newEntry),
-            diffType = ADDED,
-            itemType = DEX
-          )
+    visitKeyedSnapshotDiff(oldByName, newByName) { status, old, new ->
+      val item = new ?: requireNotNull(old)
+      val extra = if (old != null && new != null) {
+        buildDexChangedExtra(
+          oldEntry = old,
+          newEntry = new,
+          contentChangedText = context.getString(R.string.snapshot_content_changed),
+          formatSize = { it.sizeToString(context) },
+          formatClassCount = { count ->
+            context.resources.getQuantityString(
+              R.plurals.snapshot_dex_classes_count,
+              count,
+              NumberFormat.getIntegerInstance().format(count)
+            )
+          },
+          formatSizeDelta = { it.sizeToString(context) }
         )
-      } else if (oldEntry != newEntry) {
-        list.add(
-          SnapshotDetailItem(
-            name = name,
-            title = displayName,
-            extra = buildDexChangedExtra(
-              oldEntry = oldEntry,
-              newEntry = newEntry,
-              contentChangedText = context.getString(R.string.snapshot_content_changed),
-              formatSize = { it.sizeToString(context) },
-              formatClassCount = { count ->
-                context.resources.getQuantityString(
-                  R.plurals.snapshot_dex_classes_count,
-                  count,
-                  NumberFormat.getIntegerInstance().format(count)
-                )
-              },
-              formatSizeDelta = { it.sizeToString(context) }
-            ),
-            diffType = CHANGED,
-            itemType = DEX
-          )
-        )
+      } else {
+        buildDexExtra(item)
       }
+      add(SnapshotDetailItem(item.name, buildDexDisplayName(item.name, hasSplitSource), extra, status, DEX))
     }
-
-    for ((name, oldEntry) in oldByName) {
-      if (name !in newByName) {
-        list.add(
-          SnapshotDetailItem(
-            name = name,
-            title = buildDexDisplayName(name, hasSplitSource),
-            extra = buildDexExtra(oldEntry),
-            diffType = REMOVED,
-            itemType = DEX
-          )
-        )
-      }
-    }
-
-    return list
   }
 
   private fun buildDexExtra(entry: DexEntryInfo): String {
@@ -581,60 +424,26 @@ class SnapshotDetailSectionBuilder(
   private fun getResourceDiffList(
     oldList: List<ResourceEntryInfo>,
     newList: List<ResourceEntryInfo>?
-  ): List<SnapshotDetailItem> {
-    if (newList == null) return emptyList()
-
-    val list = mutableListOf<SnapshotDetailItem>()
-    val oldByName = oldList.associateBy(ResourceEntryInfo::name)
-    val newByName = newList.associateBy(ResourceEntryInfo::name)
+  ): List<SnapshotDetailItem> = buildList {
+    if (newList == null) return@buildList
+    val oldByName = oldList.associateBy { it.name }
+    val newByName = newList.associateBy { it.name }
     val hasSplitSource = (oldByName.keys + newByName.keys).any { it.startsWith("split:") }
-
-    for ((name, newEntry) in newByName) {
-      val oldEntry = oldByName[name]
-      val displayName = buildDexDisplayName(name, hasSplitSource)
-      when {
-        oldEntry == null -> list.add(
-          SnapshotDetailItem(
-            name = name,
-            title = displayName,
-            extra = newEntry.size.sizeToString(context),
-            diffType = ADDED,
-            itemType = DEX
-          )
+    visitKeyedSnapshotDiff(oldByName, newByName) { status, old, new ->
+      val item = new ?: requireNotNull(old)
+      val extra = if (old != null && new != null) {
+        buildResourceChangedExtra(
+          oldEntry = old,
+          newEntry = new,
+          contentChangedText = context.getString(R.string.snapshot_content_changed),
+          formatSize = { it.sizeToString(context) },
+          formatSizeDelta = { it.sizeToString(context) }
         )
-
-        oldEntry != newEntry -> list.add(
-          SnapshotDetailItem(
-            name = name,
-            title = displayName,
-            extra = buildResourceChangedExtra(
-              oldEntry = oldEntry,
-              newEntry = newEntry,
-              contentChangedText = context.getString(R.string.snapshot_content_changed),
-              formatSize = { it.sizeToString(context) },
-              formatSizeDelta = { it.sizeToString(context) }
-            ),
-            diffType = CHANGED,
-            itemType = DEX
-          )
-        )
+      } else {
+        item.size.sizeToString(context)
       }
+      add(SnapshotDetailItem(item.name, buildDexDisplayName(item.name, hasSplitSource), extra, status, DEX))
     }
-
-    for ((name, oldEntry) in oldByName) {
-      if (name !in newByName) {
-        list.add(
-          SnapshotDetailItem(
-            name = name,
-            title = buildDexDisplayName(name, hasSplitSource),
-            extra = oldEntry.size.sizeToString(context),
-            diffType = REMOVED,
-            itemType = DEX
-          )
-        )
-      }
-    }
-    return list
   }
 
   private fun getResourcesDiffItem(

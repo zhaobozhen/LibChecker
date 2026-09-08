@@ -1301,98 +1301,41 @@ object PackageUtils {
     val certificate = X509Certificate.getInstance(bytes)
     val serialNumber = "0x${certificate.serialNumber.toString(16)}"
     val source = buildString {
-      // Signature Scheme Version
-      append(context.getString(R.string.signature_scheme_version))
-      append(":")
-      appendLine(signatureSchemes.joinToString(", "))
-      // Signature Version
-      append(context.getString(R.string.signature_version))
-      append(":")
-      appendLine(certificate.version + 1)
-      // Signature Serial Number
-      append(context.getString(R.string.signature_serial_number))
-      append(":")
-      append(certificate.serialNumber)
-      append("(")
-      append(serialNumber)
-      appendLine(")")
-      // Signature Issuer
-      append(context.getString(R.string.signature_issuer))
-      append(":")
-      appendLine(certificate.issuerDN)
-      // Signature Subject
-      append(context.getString(R.string.signature_subject))
-      append(":")
-      appendLine(certificate.subjectDN)
-      // Signature Validity Not Before
-      append(context.getString(R.string.signature_validity_not_before))
-      append(":")
-      appendLine(dateFormat.format(certificate.notBefore))
-      // Signature Validity Not After
-      append(context.getString(R.string.signature_validity_not_after))
-      append(":")
-      appendLine(dateFormat.format(certificate.notAfter))
-      // Signature Public Key Format
-      append(context.getString(R.string.signature_public_key_format))
-      append(":")
-      appendLine(certificate.publicKey.format)
-      append(context.getString(R.string.signature_public_key_algorithm))
-      append(":")
-      appendLine(certificate.publicKey.algorithm)
+      fun field(label: Int, value: Any?) {
+        append(context.getString(label))
+        append(":")
+        appendLine(value)
+      }
+
+      field(R.string.signature_scheme_version, signatureSchemes.joinToString(", "))
+      field(R.string.signature_version, certificate.version + 1)
+      field(R.string.signature_serial_number, "${certificate.serialNumber}($serialNumber)")
+      field(R.string.signature_issuer, certificate.issuerDN)
+      field(R.string.signature_subject, certificate.subjectDN)
+      field(R.string.signature_validity_not_before, dateFormat.format(certificate.notBefore))
+      field(R.string.signature_validity_not_after, dateFormat.format(certificate.notAfter))
+      field(R.string.signature_public_key_format, certificate.publicKey.format)
+      field(R.string.signature_public_key_algorithm, certificate.publicKey.algorithm)
       when (val key = certificate.publicKey) {
         is RSAPublicKey -> {
-          // Public Key Exponent
-          append(context.getString(R.string.signature_public_key_exponent))
-          append(":")
-          append(key.publicExponent)
-          append("(0x")
-          append(key.publicExponent.toString(16))
-          appendLine(")")
-          // Public Key Modulus Size
-          append(context.getString(R.string.signature_public_key_modulus_size))
-          append(":")
-          appendLine(key.modulus.toString(2).length)
-          // Public Key Modulus
-          append(context.getString(R.string.signature_public_key_modulus))
-          append(":")
-          appendLine(key.modulus.toByteArray().toHexString(":"))
+          field(R.string.signature_public_key_exponent, "${key.publicExponent}(0x${key.publicExponent.toString(16)})")
+          field(R.string.signature_public_key_modulus_size, key.modulus.toString(2).length)
+          field(R.string.signature_public_key_modulus, key.modulus.toByteArray().toHexString(":"))
         }
 
         is DSAPublicKey -> {
-          // Public Key Y
-          append(context.getString(R.string.signature_public_key_y))
-          append(":")
-          appendLine(key.y)
+          field(R.string.signature_public_key_y, key.y)
         }
 
         else -> {
-          // Public Key Type
-          append(context.getString(R.string.signature_public_key_type))
-          append(":")
-          appendLine(key.javaClass.simpleName)
+          field(R.string.signature_public_key_type, key.javaClass.simpleName)
         }
       }
-      // Signature Algorithm Name
-      append(context.getString(R.string.signature_algorithm_name))
-      append(":")
-      appendLine(certificate.sigAlgName)
-      // Signature Algorithm OID
-      append(context.getString(R.string.signature_algorithm_oid))
-      append(":")
-      appendLine(certificate.sigAlgOID)
-      // Signature MD5
-      append(context.getString(R.string.signature_md5))
-      append(":")
-      appendLine(bytes.md5(":"))
-      // Signature SHA1
-      append(context.getString(R.string.signature_sha1))
-      append(":")
-      appendLine(bytes.sha1(":"))
-      // Signature SHA256
-      append(context.getString(R.string.signature_sha256))
-      append(":")
-      appendLine(bytes.sha256(":"))
-      // Signature CharString
+      field(R.string.signature_algorithm_name, certificate.sigAlgName)
+      field(R.string.signature_algorithm_oid, certificate.sigAlgOID)
+      field(R.string.signature_md5, bytes.md5(":"))
+      field(R.string.signature_sha1, bytes.sha1(":"))
+      field(R.string.signature_sha256, bytes.sha256(":"))
       append(context.getString(R.string.signature_char_string))
       append(":")
       append(signature.toCharsString())

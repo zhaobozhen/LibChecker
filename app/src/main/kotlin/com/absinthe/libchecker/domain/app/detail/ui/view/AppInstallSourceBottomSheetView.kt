@@ -3,25 +3,15 @@ package com.absinthe.libchecker.domain.app.detail.ui.view
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.model.AppInstallSourceAction
 import com.absinthe.libchecker.domain.app.detail.model.AppInstallSourceBottomSheetDisplay
 import com.absinthe.libchecker.domain.app.detail.model.AppInstallSourceItemDisplay
-import com.absinthe.libchecker.view.AViewGroup
-import com.absinthe.libchecker.view.app.IHeaderView
-import com.absinthe.libraries.utils.view.BottomSheetHeaderView
+import com.absinthe.libchecker.utils.extensions.dp
+import com.absinthe.libchecker.view.app.BottomSheetScaffoldView
 
-class AppInstallSourceBottomSheetView(context: Context) :
-  AViewGroup(context),
-  IHeaderView {
-
-  private val header = BottomSheetHeaderView(context).apply {
-    layoutParams =
-      LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-    title.text = context.getString(R.string.lib_detail_app_install_source_title)
-  }
+class AppInstallSourceBottomSheetView(context: Context) : BottomSheetScaffoldView(context) {
 
   private val originatingView = AppInstallSourceItemView(
     context,
@@ -66,7 +56,11 @@ class AppInstallSourceBottomSheetView(context: Context) :
 
   init {
     setPadding(24.dp, 16.dp, 24.dp, 16.dp)
-    addView(header)
+    header.title.text = context.getString(R.string.lib_detail_app_install_source_title)
+    (header.layoutParams as LayoutParams).apply {
+      marginStart = -paddingStart
+      marginEnd = -paddingEnd
+    }
     contentViews.forEach { addView(it) }
   }
 
@@ -93,33 +87,4 @@ class AppInstallSourceBottomSheetView(context: Context) :
     view.isVisible = display != null
     display?.let { view.bind(it, onAction) }
   }
-
-  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-    header.autoMeasure()
-    contentViews.forEach {
-      it.measure(
-        it.defaultWidthMeasureSpec(this),
-        if (it.isGone) 0 else it.defaultHeightMeasureSpec(this)
-      )
-    }
-    setMeasuredDimension(
-      measuredWidth,
-      paddingTop +
-        header.measuredHeight +
-        contentViews.sumOf { if (it.isGone) 0 else it.measuredHeight } +
-        paddingBottom
-    )
-  }
-
-  override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-    header.layout(0, paddingTop)
-    var childTop = header.bottom
-    contentViews.forEach {
-      it.layout(paddingStart, childTop)
-      childTop = it.bottom
-    }
-  }
-
-  override fun getHeaderView(): BottomSheetHeaderView = header
 }

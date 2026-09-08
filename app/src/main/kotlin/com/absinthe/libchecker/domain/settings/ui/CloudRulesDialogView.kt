@@ -5,31 +5,24 @@ import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.view.marginTop
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.settings.model.CloudRulesDialogAction
 import com.absinthe.libchecker.domain.settings.model.CloudRulesDialogState
+import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.utils.extensions.getResourceIdByAttr
 import com.absinthe.libchecker.view.AViewGroup
-import com.absinthe.libchecker.view.app.IHeaderView
+import com.absinthe.libchecker.view.app.BottomSheetScaffoldView
 import com.absinthe.libchecker.view.app.RuleLoadingView
-import com.absinthe.libraries.utils.view.BottomSheetHeaderView
 import com.absinthe.libraries.utils.view.HeightAnimatableViewFlipper
 import com.google.android.material.button.MaterialButton
 
-class CloudRulesDialogView(context: Context) :
-  AViewGroup(context),
-  IHeaderView {
+class CloudRulesDialogView(context: Context) : BottomSheetScaffoldView(context) {
 
   private var onAction: (CloudRulesDialogAction) -> Unit = {}
-
-  private val header = BottomSheetHeaderView(context).apply {
-    layoutParams =
-      LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-    title.text = context.getString(R.string.cloud_rules)
-  }
 
   private val viewFlipper = HeightAnimatableViewFlipper(context).apply {
     layoutParams =
@@ -55,22 +48,10 @@ class CloudRulesDialogView(context: Context) :
   }
 
   init {
-    addView(header)
-    addView(viewFlipper)
+    header.title.text = context.getString(R.string.cloud_rules)
+    addContentView(viewFlipper)
     viewFlipper.addView(loading)
     viewFlipper.addView(cloudRulesContentView)
-  }
-
-  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-    header.autoMeasure()
-    viewFlipper.autoMeasure()
-    setMeasuredDimension(measuredWidth, header.measuredHeight + viewFlipper.measuredHeight)
-  }
-
-  override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-    header.layout(0, paddingTop)
-    viewFlipper.layout(0, header.bottom)
   }
 
   private class CloudRulesContentView(
@@ -167,7 +148,7 @@ class CloudRulesDialogView(context: Context) :
   private class CloudRulesVersionView(
     context: Context,
     description: CharSequence
-  ) : AViewGroup(context) {
+  ) : LinearLayout(context) {
 
     private val version = AppCompatTextView(context).apply {
       layoutParams = LayoutParams(
@@ -189,6 +170,8 @@ class CloudRulesDialogView(context: Context) :
     }
 
     init {
+      orientation = VERTICAL
+      gravity = Gravity.CENTER_HORIZONTAL
       addView(version)
       addView(desc)
     }
@@ -200,25 +183,6 @@ class CloudRulesDialogView(context: Context) :
         .filter(String::isNotEmpty)
         .joinToString()
     }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-      super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-      version.autoMeasure()
-      desc.autoMeasure()
-      setMeasuredDimension(
-        version.measuredWidth.coerceAtLeast(desc.measuredWidth),
-        version.measuredHeight + desc.measuredHeight
-      )
-    }
-
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-      version.layout(version.toHorizontalCenter(this), 0)
-      desc.layout(desc.toHorizontalCenter(this), version.bottom)
-    }
-  }
-
-  override fun getHeaderView(): BottomSheetHeaderView {
-    return header
   }
 
   fun bind(

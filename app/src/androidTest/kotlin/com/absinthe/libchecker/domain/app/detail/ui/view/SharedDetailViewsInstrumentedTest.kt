@@ -68,7 +68,9 @@ class SharedDetailViewsInstrumentedTest {
     sheet.children.filterIsInstance<AppInstallDetailSectionView>().forEach { section ->
       val title = section.getChildAt(0)
       val card = section.children.filterIsInstance<MaterialCardView>().single()
-      assertEquals(section.width - sheet.paddingStart - sheet.paddingEnd, card.width)
+      assertEquals(sheet.width - sheet.paddingStart - sheet.paddingEnd, card.width)
+      assertEquals(sheet.paddingStart, section.left)
+      assertEquals(section.width, card.width)
       assertEquals(title.bottom + 8.dp, card.top)
       assertEquals(card.bottom, section.height)
       assertTrue(card.isLongClickable)

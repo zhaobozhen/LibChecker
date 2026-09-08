@@ -79,6 +79,68 @@ class ManifestReadersTest {
     assertTrue(FullManifestReader(byteArrayOf(1, 2, 3), null).properties.isEmpty())
   }
 
+  @Test
+  fun preservesNodeWriteTimingAndTypedValues() {
+    for (tag in listOf("manifest", "application", "uses-sdk", "overlay")) {
+      val writer = AxmlWriter()
+      val root = writer.child(null, "manifest")
+      val node = if (tag == "manifest") root else root.child(null, tag)
+      node.attribute("a", "first")
+      node.attr(null, "b", -1, null, Res_value(Res_value.TYPE_REFERENCE, 0x7f010001, null, null))
+      if (node !== root) node.end()
+      root.end()
+      writer.end()
+      val expected = buildMap<String, Any> {
+        if (tag == "overlay") put("overlay", true)
+        if (tag == "manifest" || tag == "application") put("a", "first")
+        put("b", 0x7f010001)
+      }
+      val bytes = writer.toByteArray()
+      val demands = arrayOf("a", "b")
+      assertEquals(tag, expected, ManifestReader.getManifestProperties(bytes, demands))
+      assertEquals(tag, expected, ManifestReader.getManifestProperties(archive(bytes), demands))
+    }
+  }
+
+  @Test
+  fun preservesRootEndOverwriteAndIgnoresUndemandedAttributes() {
+    val writer = AxmlWriter()
+    val root = writer.child(null, "manifest")
+    root.attribute("a", "root")
+    root.child(null, "application").apply {
+      attribute("a", "application")
+      attribute("ignored", "ignored")
+      end()
+    }
+    root.end()
+    writer.end()
+    assertEquals(mapOf("a" to "root"), ManifestReader.getManifestProperties(writer.toByteArray(), arrayOf("a")))
+  }
+
+  @Test
+  fun preservesNullTypedAttributeHandling() {
+    val nullValue = Res_value(Res_value.TYPE_NULL, 0, null, null)
+    for (tag in listOf("manifest", "application", "uses-sdk", "overlay")) {
+      for (nullLast in listOf(false, true)) {
+        val writer = AxmlWriter()
+        val root = writer.child(null, "manifest")
+        val node = if (tag == "manifest") root else root.child(null, tag)
+        node.attr(null, "a", -1, null, if (nullLast) Res_value(Res_value.TYPE_STRING, 0, "first", null) else nullValue)
+        node.attr(null, "b", -1, null, if (nullLast) nullValue else Res_value(Res_value.TYPE_STRING, 0, "last", null))
+        if (node !== root) node.end()
+        root.end()
+        writer.end()
+        val expected = buildMap<String, Any> {
+          if (tag == "overlay") put("overlay", true)
+          if (nullLast && (tag == "manifest" || tag == "application")) put("a", "first")
+          val lastValue = if (nullLast) nullValue.toString() else "last"
+          put("b", lastValue)
+        }
+        assertEquals("$tag nullLast=$nullLast", expected, ManifestReader.getManifestProperties(writer.toByteArray(), arrayOf("a", "b")))
+      }
+    }
+  }
+
   private fun archive(manifest: ByteArray?) = temporaryFolder.newFile().apply {
     ZipOutputStream(outputStream()).use { zip ->
       zip.putNextEntry(ZipEntry(if (manifest == null) "other" else "AndroidManifest.xml"))

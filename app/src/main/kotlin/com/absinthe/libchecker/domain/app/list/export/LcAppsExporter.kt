@@ -17,9 +17,9 @@ import androidx.core.graphics.drawable.toBitmap
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.compat.ZipFileCompat
 import com.absinthe.libchecker.domain.app.buildmetadata.COMPOSE_VERSION_ENTRIES
-import com.absinthe.libchecker.domain.app.buildmetadata.DATA_BINDING_VERSION_ENTRIES
 import com.absinthe.libchecker.domain.app.buildmetadata.KotlinBuildMetadataDetector
 import com.absinthe.libchecker.domain.app.buildmetadata.KotlinVersionInferenceHints
+import com.absinthe.libchecker.domain.app.buildmetadata.readAgpVersion
 import com.absinthe.libchecker.domain.app.buildmetadata.readFirstPresentLine
 import com.absinthe.libchecker.domain.app.repository.InstalledAppRepository
 import com.absinthe.libchecker.utils.IntentFilterUtils
@@ -41,7 +41,6 @@ import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.InputStreamReader
 import java.io.OutputStream
 import java.math.BigInteger
 import java.security.cert.CertificateFactory
@@ -51,7 +50,6 @@ import java.security.interfaces.RSAPublicKey
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.Properties
 import java.util.TimeZone
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
@@ -478,34 +476,12 @@ object LcAppsExporter {
           gradleVersion = kotlinInfo.gradleVersion,
           composeDetected = composeDetected,
           composeVersion = composeVersion,
-          agpVersion = readAgpVersion(zip)
+          agpVersion = zip.readAgpVersion()
         )
       }
     }.onFailure {
       Timber.w(it, "Failed to read build metadata: ${packageInfo.packageName}")
     }.getOrDefault(BuildMetadataExport())
-  }
-
-  private fun readAgpVersion(zip: ZipFileCompat): String? {
-    zip.getEntry("META-INF/com/android/build/gradle/app-metadata.properties")?.let { entry ->
-      runCatching {
-        val properties = Properties()
-        zip.getInputStream(entry).use { properties.load(it) }
-        properties.getProperty(AGP_KEYWORD)?.takeIf { it.isNotBlank() }
-      }.getOrNull()?.let { return it }
-    }
-
-    zip.getEntry("META-INF/MANIFEST.MF")?.let { entry ->
-      runCatching {
-        InputStreamReader(zip.getInputStream(entry), Charsets.UTF_8).buffered().useLines { lines ->
-          lines.firstOrNull { it.startsWith(AGP_KEYWORD_MANIFEST_PREFIX) }
-            ?.removePrefix(AGP_KEYWORD_MANIFEST_PREFIX)
-            ?.takeIf { it.isNotBlank() }
-        }
-      }.getOrNull()?.let { return it }
-    }
-
-    return zip.readFirstPresentLine(DATA_BINDING_VERSION_ENTRIES)
   }
 
   private fun buildSignatures(packageInfo: PackageInfo): SignaturesExport {
@@ -765,8 +741,6 @@ object LcAppsExporter {
   private const val REPORT_BATCH_SIZE = 8
   private const val ZIP_BUFFER_SIZE = 64 * 1024
   private const val KOTLIN_TOOLING_METADATA_ENTRY = "kotlin-tooling-metadata.json"
-  private const val AGP_KEYWORD = "androidGradlePluginVersion"
-  private const val AGP_KEYWORD_MANIFEST_PREFIX = "Created-By: Android Gradle "
 
   data class ExportResult(val appCount: Int)
 

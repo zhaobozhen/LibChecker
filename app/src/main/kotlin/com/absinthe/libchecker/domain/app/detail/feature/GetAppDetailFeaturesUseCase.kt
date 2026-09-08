@@ -9,10 +9,10 @@ import com.absinthe.libchecker.compat.PackageManagerCompat
 import com.absinthe.libchecker.compat.ZipFileCompat
 import com.absinthe.libchecker.database.entity.Features
 import com.absinthe.libchecker.domain.app.buildmetadata.COMPOSE_VERSION_ENTRIES
-import com.absinthe.libchecker.domain.app.buildmetadata.DATA_BINDING_VERSION_ENTRIES
 import com.absinthe.libchecker.domain.app.buildmetadata.KotlinBuildMetadata
 import com.absinthe.libchecker.domain.app.buildmetadata.KotlinBuildMetadataDetector
 import com.absinthe.libchecker.domain.app.buildmetadata.KotlinVersionInferenceHints
+import com.absinthe.libchecker.domain.app.buildmetadata.readAgpVersion
 import com.absinthe.libchecker.domain.app.buildmetadata.readFirstPresentLine
 import com.absinthe.libchecker.domain.app.detail.model.AppIconItem
 import com.absinthe.libchecker.domain.app.model.VersionedFeature
@@ -26,8 +26,6 @@ import com.absinthe.libchecker.utils.extensions.isPageSizeCompat
 import com.absinthe.libchecker.utils.extensions.isPlayAppSigning
 import com.absinthe.libchecker.utils.extensions.isUseKMP
 import java.io.File
-import java.io.InputStreamReader
-import java.util.Properties
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -184,7 +182,7 @@ class GetAppDetailFeaturesUseCase(
         )
       }
       if (readAgp) {
-        emitFeature(VersionedFeature(Features.AGP, readAgpVersion(zip)))
+        emitFeature(VersionedFeature(Features.AGP, zip.readAgpVersion()))
       }
       if (readCompose) {
         emitFeature(
@@ -241,28 +239,6 @@ class GetAppDetailFeaturesUseCase(
     ).toKotlinDialogEntries()
   }
 
-  private fun readAgpVersion(zip: ZipFileCompat): String? {
-    zip.getEntry(AGP_METADATA_ENTRY)?.let { entry ->
-      runCatching {
-        Properties().apply {
-          load(zip.getInputStream(entry))
-        }.getProperty(AGP_KEYWORD)?.takeIf { it.isNotBlank() }
-      }.getOrNull()?.let { return it }
-    }
-
-    zip.getEntry(MANIFEST_MF_ENTRY)?.let { entry ->
-      runCatching {
-        InputStreamReader(zip.getInputStream(entry), Charsets.UTF_8).buffered().useLines { lines ->
-          lines.firstOrNull { it.startsWith(AGP_MANIFEST_PREFIX) }
-            ?.removePrefix(AGP_MANIFEST_PREFIX)
-            ?.takeIf { version -> version.isNotBlank() }
-        }
-      }.getOrNull()?.let { return it }
-    }
-
-    return zip.readFirstPresentLine(DATA_BINDING_VERSION_ENTRIES)
-  }
-
   private fun getAllAppIcons(packageInfo: PackageInfo): List<AppIconItem> {
     if (!OsUtils.atLeastO()) return emptyList()
     val applicationInfo = packageInfo.applicationInfo ?: return emptyList()
@@ -314,10 +290,6 @@ data class AppDetailFeatures(
 
 private val DEFAULT_KOTLIN_PLUGIN_INFO: Map<String, String?> = mapOf("Kotlin" to null)
 
-private const val AGP_METADATA_ENTRY = "META-INF/com/android/build/gradle/app-metadata.properties"
-private const val AGP_KEYWORD = "androidGradlePluginVersion"
-private const val MANIFEST_MF_ENTRY = "META-INF/MANIFEST.MF"
-private const val AGP_MANIFEST_PREFIX = "Created-By: Android Gradle "
 private const val XPOSED_MODULE_PROP_ENTRY = "META-INF/xposed/module.prop"
 
 private const val KOTLIN_INFERENCE_PACKAGE_FLAGS = PackageManager.GET_ACTIVITIES or

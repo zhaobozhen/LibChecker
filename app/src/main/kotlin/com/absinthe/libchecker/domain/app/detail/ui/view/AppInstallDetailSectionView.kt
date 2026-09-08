@@ -5,19 +5,17 @@ import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.annotation.StringRes
 import androidx.appcompat.widget.AppCompatTextView
-import androidx.core.view.isGone
-import androidx.core.view.marginTop
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.utils.extensions.getColorByAttr
 import com.absinthe.libchecker.utils.extensions.getColorStateListByAttr
 import com.absinthe.libchecker.utils.extensions.setSmoothRoundCorner
-import com.absinthe.libchecker.view.AViewGroup
 import com.google.android.material.card.MaterialCardView
 
-open class AppInstallDetailSectionView(context: Context, @StringRes title: Int) : AViewGroup(context) {
+open class AppInstallDetailSectionView(context: Context, @StringRes title: Int) : LinearLayout(context) {
 
   private val titleView = AppCompatTextView(
     ContextThemeWrapper(context, R.style.TextView_SansSerifMedium)
@@ -46,6 +44,7 @@ open class AppInstallDetailSectionView(context: Context, @StringRes title: Int) 
   }
 
   init {
+    orientation = VERTICAL
     addView(titleView)
     addView(container)
   }
@@ -57,27 +56,5 @@ open class AppInstallDetailSectionView(context: Context, @StringRes title: Int) 
     content.isFocusable = false
     content.isFocusableInTouchMode = false
     container.addView(content)
-  }
-
-  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    val parent = parent as ViewGroup
-    super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-    titleView.autoMeasure()
-    container.measure(
-      (measuredWidth - parent.paddingStart - parent.paddingEnd).toExactlyMeasureSpec(),
-      if (container.isGone) 0 else container.defaultHeightMeasureSpec(parent)
-    )
-    setMeasuredDimension(
-      measuredWidth,
-      titleView.marginTop +
-        titleView.measuredHeight +
-        container.marginTop +
-        container.measuredHeight
-    )
-  }
-
-  override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-    titleView.layout(paddingStart, titleView.marginTop)
-    container.layout(paddingStart, titleView.bottom + container.marginTop)
   }
 }

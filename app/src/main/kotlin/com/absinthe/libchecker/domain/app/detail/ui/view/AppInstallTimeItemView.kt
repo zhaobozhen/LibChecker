@@ -2,13 +2,11 @@ package com.absinthe.libchecker.domain.app.detail.ui.view
 
 import android.content.Context
 import android.view.ViewGroup
-import androidx.core.view.marginBottom
-import androidx.core.view.marginTop
+import android.widget.LinearLayout
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.action.AppInstalledTimeDisplayData
 import com.absinthe.libchecker.utils.extensions.dp
 import com.absinthe.libchecker.utils.extensions.setLongClickCopiedToClipboard
-import com.absinthe.libchecker.view.AViewGroup
 
 class AppInstallTimeItemView(context: Context) : AppInstallDetailSectionView(context, R.string.lib_detail_app_installed_time) {
 
@@ -22,7 +20,7 @@ class AppInstallTimeItemView(context: Context) : AppInstallDetailSectionView(con
     container.setLongClickCopiedToClipboard(contentView.getAllContentText())
   }
 
-  private class ContentView(context: Context) : AViewGroup(context) {
+  private class ContentView(context: Context) : LinearLayout(context) {
     private val firstInstalledLabel = context.getString(R.string.lib_detail_app_first_installed_time)
     private val lastUpdatedLabel = context.getString(R.string.lib_detail_app_last_updated_time)
     private var firstInstalledTime: CharSequence = ""
@@ -49,6 +47,7 @@ class AppInstallTimeItemView(context: Context) : AppInstallDetailSectionView(con
     }
 
     init {
+      orientation = VERTICAL
       setPadding(0, 8.dp, 0, 8.dp)
       addView(firstInstalledView)
       addView(lastUpdatedView)
@@ -71,27 +70,6 @@ class AppInstallTimeItemView(context: Context) : AppInstallDetailSectionView(con
         lastUpdatedLabel,
         lastUpdatedTime
       ).joinToString(System.lineSeparator())
-    }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-      super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-      firstInstalledView.autoMeasure()
-      lastUpdatedView.autoMeasure()
-      setMeasuredDimension(
-        measuredWidth,
-        paddingTop +
-          firstInstalledView.marginTop +
-          firstInstalledView.measuredHeight +
-          lastUpdatedView.marginTop +
-          lastUpdatedView.measuredHeight +
-          lastUpdatedView.marginBottom +
-          paddingBottom
-      )
-    }
-
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-      firstInstalledView.layout(paddingStart, firstInstalledView.marginTop + paddingTop)
-      lastUpdatedView.layout(paddingStart, firstInstalledView.bottom + lastUpdatedView.marginTop)
     }
   }
 }

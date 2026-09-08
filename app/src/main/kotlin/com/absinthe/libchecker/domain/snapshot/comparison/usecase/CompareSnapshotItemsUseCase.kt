@@ -2,6 +2,10 @@ package com.absinthe.libchecker.domain.snapshot.comparison.usecase
 
 import com.absinthe.libchecker.database.entity.SnapshotItem
 import com.absinthe.libchecker.domain.app.detail.model.LibStringItem
+import com.absinthe.libchecker.domain.snapshot.model.ADDED
+import com.absinthe.libchecker.domain.snapshot.model.CHANGED
+import com.absinthe.libchecker.domain.snapshot.model.MOVED
+import com.absinthe.libchecker.domain.snapshot.model.REMOVED
 import com.absinthe.libchecker.domain.snapshot.model.SnapshotDiffItem
 import com.absinthe.libchecker.utils.dex.DexEntryInfo
 import com.absinthe.libchecker.utils.dex.ResourceEntryInfo
@@ -156,12 +160,9 @@ class CompareSnapshotItemsUseCase {
       List::class.java,
       DexEntryInfo::class.java
     ).orEmpty().associateBy(DexEntryInfo::name)
-    val commonNames = oldByName.keys intersect newByName.keys
-    return DiffIndicator(
-      added = (newByName.keys - oldByName.keys).size,
-      removed = (oldByName.keys - newByName.keys).size,
-      changed = commonNames.count { name -> oldByName[name] != newByName[name] }
-    )
+    return DiffIndicator().apply {
+      visitKeyedSnapshotDiff(oldByName, newByName) { status, _, _ -> record(status) }
+    }
   }
 
   private fun compareResourceDiff(
@@ -176,12 +177,9 @@ class CompareSnapshotItemsUseCase {
       List::class.java,
       ResourceEntryInfo::class.java
     ).orEmpty().associateBy(ResourceEntryInfo::name)
-    val commonNames = oldByName.keys intersect newByName.keys
-    return DiffIndicator(
-      added = (newByName.keys - oldByName.keys).size,
-      removed = (oldByName.keys - newByName.keys).size,
-      changed = commonNames.count { name -> oldByName[name] != newByName[name] }
-    )
+    return DiffIndicator().apply {
+      visitKeyedSnapshotDiff(oldByName, newByName) { status, _, _ -> record(status) }
+    }
   }
 
   private fun compareNativeDiff(
@@ -209,30 +207,9 @@ class CompareSnapshotItemsUseCase {
       String::class.java
     ).orEmpty().toSet()
 
-    val removeList = (oldSet - newSet).toMutableSet()
-    val addList = (newSet - oldSet).toMutableSet()
-    val node = DiffIndicator()
-    val pendingRemovedOldSet = mutableSetOf<String>()
-    val pendingRemovedNewSet = mutableSetOf<String>()
-
-    val firstRemovedByShortName = removeList.reversed().associateBy { it.substringAfterLast(".") }
-    for (item in addList) {
-      firstRemovedByShortName[item.substringAfterLast(".")]?.let {
-        node.moved += 1
-        pendingRemovedOldSet += it
-        pendingRemovedNewSet += item
-      }
+    return DiffIndicator().apply {
+      visitComponentSnapshotDiff(oldSet, newSet) { status, _, _ -> record(status) }
     }
-    removeList.removeAll(pendingRemovedOldSet)
-    addList.removeAll(pendingRemovedNewSet)
-
-    if (removeList.isNotEmpty()) {
-      node.removed = removeList.size
-    }
-    if (addList.isNotEmpty()) {
-      node.added = addList.size
-    }
-    return node
   }
 
   private fun comparePermissionsDiff(
@@ -243,17 +220,9 @@ class CompareSnapshotItemsUseCase {
       return DiffIndicator(removed = Int.MAX_VALUE)
     }
 
-    val removeList = oldSet - newSet
-    val addList = newSet - oldSet
-    val node = DiffIndicator()
-
-    if (removeList.isNotEmpty()) {
-      node.removed = removeList.size
+    return DiffIndicator().apply {
+      visitSetSnapshotDiff(oldSet, newSet) { status, _, _ -> record(status) }
     }
-    if (addList.isNotEmpty()) {
-      node.added = addList.size
-    }
-    return node
   }
 
   private fun compareMetadataDiff(
@@ -272,18 +241,9 @@ class CompareSnapshotItemsUseCase {
     newList: List<LibStringItem>,
     changed: (LibStringItem, LibStringItem) -> Boolean
   ): DiffIndicator {
-    val index = SnapshotNameIndex(oldList)
-    val node = DiffIndicator()
-    for (item in newList) {
-      val old = index.match(item.name)
-      if (old == null) {
-        node.added++
-      } else if (changed(old, item)) {
-        node.changed++
-      }
+    return DiffIndicator().apply {
+      visitNamedSnapshotDiff(oldList, newList, changed) { status, _, _ -> record(status) }
     }
-    node.removed = index.remainingItems().size
-    return node
   }
 
   private data class DiffIndicator(
@@ -291,5 +251,14 @@ class CompareSnapshotItemsUseCase {
     var removed: Int = 0,
     var changed: Int = 0,
     var moved: Int = 0
-  )
+  ) {
+    fun record(status: Int) {
+      when (status) {
+        ADDED -> added++
+        REMOVED -> removed++
+        CHANGED -> changed++
+        MOVED -> moved++
+      }
+    }
+  }
 }
