@@ -23,6 +23,7 @@ import com.absinthe.libchecker.domain.app.buildmetadata.KotlinVersionInferenceHi
 import com.absinthe.libchecker.domain.app.buildmetadata.readFirstPresentLine
 import com.absinthe.libchecker.domain.app.repository.InstalledAppRepository
 import com.absinthe.libchecker.utils.IntentFilterUtils
+import com.absinthe.libchecker.utils.JsonUtil
 import com.absinthe.libchecker.utils.OsUtils
 import com.absinthe.libchecker.utils.PackageUtils
 import com.absinthe.libchecker.utils.apk.ApkSignatureSchemeDetector
@@ -33,6 +34,8 @@ import com.absinthe.libchecker.utils.extensions.md5
 import com.absinthe.libchecker.utils.extensions.sha1
 import com.absinthe.libchecker.utils.extensions.sha256
 import com.absinthe.libchecker.utils.extensions.toHexString
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonWriter
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
@@ -686,313 +689,10 @@ object LcAppsExporter {
     return isoDateFormat.get()!!.format(this)
   }
 
-  private fun writeReport(writer: JsonWriter, report: ExportReport) {
-    writer.beginObject()
-    writer.writeString("locale", report.locale)
-    writer.name("terminalSystem")
-    writer.writeTerminalSystem(report.terminalSystem)
-    writer.name("analysisProfile")
-    writer.writeAnalysisProfile(report.analysisProfile)
-    writer.writeNumber("durationMs", report.durationMs)
-    writer.writeString("fileName", report.fileName)
-    writer.writeNumber("fileSizeBytes", report.fileSizeBytes)
-    writer.writeString("analyzedAt", report.analyzedAt)
-    writer.name("apkInfo")
-    writer.writeApkInfo(report.apkInfo)
-    writer.endObject()
-  }
+  private val reportAdapter by lazy { JsonUtil.moshi.adapter(ExportReport::class.java) }
 
-  private fun JsonWriter.writeApkInfo(info: ApkInfoExport) {
-    beginObject()
-    writeString("appName", info.appName)
-    writeString("packageName", info.packageName)
-    writeString("versionName", info.versionName)
-    writeString("versionCode", info.versionCode)
-    writeString("minSdk", info.minSdk)
-    writeString("targetSdk", info.targetSdk)
-    writeString("compileSdk", info.compileSdk)
-    name("icon")
-    writeIcon(info.icon)
-    writeStringArray("permissions", info.permissions)
-    name("nativeLibraries")
-    beginArray()
-    info.nativeLibraries.forEach { writeNativeLibrary(it) }
-    endArray()
-    name("components")
-    writeComponents(info.components)
-    name("metaData")
-    writeMetaData(info.metaData)
-    name("buildFeatures")
-    writeBuildFeatures(info.buildFeatures)
-    name("signatures")
-    writeSignatures(info.signatures)
-    name("sdkSummary")
-    writeSdkSummary(info.sdkSummary)
-    endObject()
-  }
-
-  private fun JsonWriter.writeIcon(icon: IconEntry?) {
-    if (icon == null) {
-      nullValue()
-      return
-    }
-    beginObject()
-    name("resourceId")
-    nullValue()
-    writeString("path", icon.path)
-    writeString("mimeType", MIME_TYPE_PNG)
-    writeNumber("size", icon.size)
-    writeString("dataUri", "")
-    endObject()
-  }
-
-  private fun JsonWriter.writeNativeLibrary(library: NativeLibraryExport) {
-    beginObject()
-    writeString("abi", library.abi)
-    writeString("name", library.name)
-    writeString("path", library.path)
-    writeNumber("size", library.size)
-    name("sdk")
-    writeSdkRule(library.sdk)
-    endObject()
-  }
-
-  private fun JsonWriter.writeComponents(components: ComponentsExport) {
-    beginObject()
-    writeComponentArray("activities", components.activities)
-    writeComponentArray("services", components.services)
-    writeComponentArray("receivers", components.receivers)
-    writeComponentArray("providers", components.providers)
-    endObject()
-  }
-
-  private fun JsonWriter.writeComponentArray(name: String, components: List<ComponentExport>) {
-    name(name)
-    beginArray()
-    components.forEach { writeComponent(it) }
-    endArray()
-  }
-
-  private fun JsonWriter.writeComponent(component: ComponentExport) {
-    beginObject()
-    writeString("type", component.type)
-    writeString("section", component.section)
-    writeString("name", component.name)
-    writeString("shortName", component.shortName)
-    writeBoolean("exported", component.exported)
-    writeBoolean("enabled", component.enabled)
-    writeString("permission", component.permission)
-    writeString("process", component.process)
-    writeString("authorities", component.authorities)
-    writeString("targetActivity", component.targetActivity)
-    writeString("label", component.label)
-    writeNumber("labelRef", component.labelRef)
-    writeStringArray("actions", component.actions)
-    name("metaData")
-    beginArray()
-    component.metaData.forEach { writeMetaDataItem(it) }
-    endArray()
-    name("sdk")
-    writeSdkRule(component.sdk)
-    endObject()
-  }
-
-  private fun JsonWriter.writeMetaData(metaData: MetaDataExport) {
-    beginObject()
-    name("application")
-    beginArray()
-    metaData.application.forEach { writeMetaDataItem(it) }
-    endArray()
-    name("components")
-    beginArray()
-    metaData.components.forEach { writeMetaDataItem(it) }
-    endArray()
-    endObject()
-  }
-
-  private fun JsonWriter.writeMetaDataItem(item: MetaDataItemExport) {
-    beginObject()
-    writeString("name", item.name)
-    writeString("value", item.value)
-    writeNumber("resourceId", item.resourceId)
-    writeBoolean("hasResourceReference", item.hasResourceReference)
-    writeBoolean("resolvedFromResource", item.resolvedFromResource)
-    endObject()
-  }
-
-  private fun JsonWriter.writeBuildFeatures(features: BuildFeaturesExport) {
-    beginObject()
-    writeBoolean("kotlinDetected", features.kotlinDetected)
-    writeString("kotlinVersion", features.kotlinVersion)
-    writeString("gradleVersion", features.gradleVersion)
-    writeBoolean("composeDetected", features.composeDetected)
-    writeString("composeVersion", features.composeVersion)
-    writeString("agpVersion", features.agpVersion)
-    writeString("appMetadataVersion", features.appMetadataVersion)
-    endObject()
-  }
-
-  private fun JsonWriter.writeSignatures(signatures: SignaturesExport) {
-    beginObject()
-    writeStringArray("schemes", signatures.schemes)
-    name("certificates")
-    beginArray()
-    signatures.certificates.forEach { writeCertificate(it) }
-    endArray()
-    endObject()
-  }
-
-  private fun JsonWriter.writeCertificate(certificate: CertificateExport) {
-    beginObject()
-    writeStringArray("schemes", certificate.schemes)
-    name("serialNumber")
-    writeIntegerValue(certificate.serialNumber)
-    writeNumber("version", certificate.version)
-    writeString("issuer", certificate.issuer)
-    writeString("subject", certificate.subject)
-    name("validity")
-    beginObject()
-    writeString("notBefore", certificate.validity.notBefore)
-    writeString("notAfter", certificate.validity.notAfter)
-    endObject()
-    name("publicKey")
-    writePublicKey(certificate.publicKey)
-    name("signatureAlgorithm")
-    beginObject()
-    writeString("name", certificate.signatureAlgorithm.name)
-    writeString("oid", certificate.signatureAlgorithm.oid)
-    endObject()
-    name("fingerprints")
-    beginObject()
-    writeString("md5", certificate.fingerprints.md5)
-    writeString("sha1", certificate.fingerprints.sha1)
-    writeString("sha256", certificate.fingerprints.sha256)
-    endObject()
-    writeString("charString", certificate.charString)
-    writeStringArray("sourceEntries", certificate.sourceEntries)
-    writeNumber("derLength", certificate.derLength)
-    endObject()
-  }
-
-  private fun JsonWriter.writePublicKey(publicKey: PublicKeyExport) {
-    beginObject()
-    writeString("format", publicKey.format)
-    writeString("algorithm", publicKey.algorithm)
-    writeString("algorithmOid", publicKey.algorithmOid)
-    name("exponent")
-    writeIntegerValue(publicKey.exponent)
-    writeNumber("modulusSizeBits", publicKey.modulusSizeBits)
-    writeString("modulusHex", publicKey.modulusHex)
-    writeString("y", publicKey.y)
-    writeString("type", publicKey.type)
-    endObject()
-  }
-
-  private fun JsonWriter.writeIntegerValue(value: IntegerValueExport?) {
-    if (value == null) {
-      nullValue()
-      return
-    }
-    beginObject()
-    writeString("decimal", value.decimal)
-    writeString("hex", value.hex)
-    endObject()
-  }
-
-  private fun JsonWriter.writeSdkSummary(summary: SdkSummaryExport) {
-    beginObject()
-    writeSdkSummaryArray("native", summary.native)
-    writeSdkSummaryArray("components", summary.components)
-    endObject()
-  }
-
-  private fun JsonWriter.writeSdkSummaryArray(name: String, items: List<SdkSummaryItemExport>) {
-    name(name)
-    beginArray()
-    items.forEach { item ->
-      beginObject()
-      writeString("key", item.key)
-      writeString("label", item.label)
-      writeString("iconName", item.iconName)
-      writeString("iconUrl", item.iconUrl)
-      writeBoolean("singleColorIcon", item.singleColorIcon)
-      writeString("ruleDetail", item.ruleDetail)
-      writeNumber("count", item.count)
-      writeString("detail", item.detail)
-      writeStringArray("previewItems", item.previewItems)
-      endObject()
-    }
-    endArray()
-  }
-
-  private fun JsonWriter.writeSdkRule(rule: SdkRuleExport?) {
-    if (rule == null) {
-      nullValue()
-      return
-    }
-    beginObject()
-    writeString("label", rule.label)
-    writeString("iconName", rule.iconName)
-    writeString("iconUrl", rule.iconUrl)
-    writeBoolean("singleColorIcon", rule.singleColorIcon)
-    writeString("matchSource", rule.matchSource)
-    writeString("regexName", rule.regexName)
-    writeString("ruleDetail", rule.ruleDetail)
-    writeNumber("type", rule.type)
-    endObject()
-  }
-
-  private fun JsonWriter.writeAnalysisProfile(profile: AnalysisProfileExport) {
-    beginObject()
-    writeString("id", profile.id)
-    writeStringArray("capabilities", profile.capabilities)
-    writeNumber("ruleCount", profile.ruleCount)
-    writeNumber("iconCount", profile.iconCount)
-    writeNumber("uniqueSdkCount", profile.uniqueSdkCount)
-    writeNumber("sdkMarkerCount", profile.sdkMarkerCount)
-    writeNumber("nativeSdkMarkerCount", profile.nativeSdkMarkerCount)
-    writeNumber("componentSdkMarkerCount", profile.componentSdkMarkerCount)
-    name("runtime")
-    beginObject()
-    writeBoolean("worker", profile.runtime.worker)
-    writeBoolean("decompressionStream", profile.runtime.decompressionStream)
-    name("system")
-    writeTerminalSystem(profile.runtime.system)
-    endObject()
-    name("stats")
-    beginObject()
-    writeNumber("components", profile.stats.components)
-    endObject()
-    endObject()
-  }
-
-  private fun JsonWriter.writeTerminalSystem(system: TerminalSystemExport) {
-    beginObject()
-    writeString("name", system.name)
-    writeString("version", system.version)
-    writeNumber("sdkInt", system.sdkInt)
-    writeString("manufacturer", system.manufacturer)
-    writeString("model", system.model)
-    endObject()
-  }
-
-  private fun JsonWriter.writeString(name: String, value: String?) {
-    name(name).value(value)
-  }
-
-  private fun JsonWriter.writeStringArray(name: String, values: List<String>) {
-    name(name)
-    beginArray()
-    values.forEach { value(it) }
-    endArray()
-  }
-
-  private fun JsonWriter.writeNumber(name: String, value: Number?) {
-    name(name).value(value)
-  }
-
-  private fun JsonWriter.writeBoolean(name: String, value: Boolean?) {
-    name(name).value(value)
+  internal fun writeReport(writer: JsonWriter, report: ExportReport) {
+    reportAdapter.toJson(writer, report)
   }
 
   private enum class ExportStage {
@@ -1070,7 +770,8 @@ object LcAppsExporter {
 
   data class ExportResult(val appCount: Int)
 
-  private data class ExportReport(
+  @JsonClass(generateAdapter = true)
+  internal data class ExportReport(
     val locale: String,
     val terminalSystem: TerminalSystemExport,
     val analysisProfile: AnalysisProfileExport,
@@ -1081,7 +782,8 @@ object LcAppsExporter {
     val apkInfo: ApkInfoExport
   )
 
-  private data class ApkInfoExport(
+  @JsonClass(generateAdapter = true)
+  internal data class ApkInfoExport(
     val appName: String,
     val packageName: String,
     val versionName: String,
@@ -1099,7 +801,13 @@ object LcAppsExporter {
     val sdkSummary: SdkSummaryExport
   )
 
-  private data class IconEntry(val path: String, val size: Long)
+  @JsonClass(generateAdapter = true)
+  internal data class IconEntry(
+    val path: String,
+    val size: Long,
+    val mimeType: String = MIME_TYPE_PNG,
+    val dataUri: String = ""
+  )
 
   private data class EncodedIcon(
     val index: Int,
@@ -1107,7 +815,8 @@ object LcAppsExporter {
     val bytes: ByteArray
   )
 
-  private data class NativeLibraryExport(
+  @JsonClass(generateAdapter = true)
+  internal data class NativeLibraryExport(
     val abi: String,
     val name: String,
     val path: String,
@@ -1115,17 +824,20 @@ object LcAppsExporter {
     val sdk: SdkRuleExport?
   )
 
-  private data class ComponentsExport(
+  @JsonClass(generateAdapter = true)
+  internal data class ComponentsExport(
     val activities: List<ComponentExport>,
     val services: List<ComponentExport>,
     val receivers: List<ComponentExport>,
     val providers: List<ComponentExport>
   ) {
+    @Json(ignore = true)
     val all: List<ComponentExport>
       get() = activities + services + receivers + providers
   }
 
-  private data class ComponentExport(
+  @JsonClass(generateAdapter = true)
+  internal data class ComponentExport(
     val type: String,
     val section: String,
     val name: String,
@@ -1143,12 +855,14 @@ object LcAppsExporter {
     val sdk: SdkRuleExport?
   )
 
-  private data class MetaDataExport(
+  @JsonClass(generateAdapter = true)
+  internal data class MetaDataExport(
     val application: List<MetaDataItemExport>,
     val components: List<MetaDataItemExport>
   )
 
-  private data class MetaDataItemExport(
+  @JsonClass(generateAdapter = true)
+  internal data class MetaDataItemExport(
     val name: String,
     val value: String?,
     val resourceId: Int?,
@@ -1156,7 +870,8 @@ object LcAppsExporter {
     val resolvedFromResource: Boolean
   )
 
-  private data class BuildFeaturesExport(
+  @JsonClass(generateAdapter = true)
+  internal data class BuildFeaturesExport(
     val kotlinDetected: Boolean,
     val kotlinVersion: String?,
     val gradleVersion: String?,
@@ -1175,12 +890,14 @@ object LcAppsExporter {
     val agpVersion: String? = null
   )
 
-  private data class SignaturesExport(
+  @JsonClass(generateAdapter = true)
+  internal data class SignaturesExport(
     val schemes: List<String>,
     val certificates: List<CertificateExport>
   )
 
-  private data class CertificateExport(
+  @JsonClass(generateAdapter = true)
+  internal data class CertificateExport(
     val schemes: List<String>,
     val sourceEntries: List<String>,
     val derLength: Long,
@@ -1195,17 +912,20 @@ object LcAppsExporter {
     val charString: String
   )
 
-  private data class IntegerValueExport(
+  @JsonClass(generateAdapter = true)
+  internal data class IntegerValueExport(
     val decimal: String,
     val hex: String
   )
 
-  private data class ValidityExport(
+  @JsonClass(generateAdapter = true)
+  internal data class ValidityExport(
     val notBefore: String,
     val notAfter: String
   )
 
-  private data class PublicKeyExport(
+  @JsonClass(generateAdapter = true)
+  internal data class PublicKeyExport(
     val format: String?,
     val algorithm: String?,
     val algorithmOid: String?,
@@ -1216,23 +936,27 @@ object LcAppsExporter {
     val type: String?
   )
 
-  private data class SignatureAlgorithmExport(
+  @JsonClass(generateAdapter = true)
+  internal data class SignatureAlgorithmExport(
     val name: String?,
     val oid: String?
   )
 
-  private data class FingerprintsExport(
+  @JsonClass(generateAdapter = true)
+  internal data class FingerprintsExport(
     val md5: String,
     val sha1: String,
     val sha256: String
   )
 
-  private data class SdkSummaryExport(
+  @JsonClass(generateAdapter = true)
+  internal data class SdkSummaryExport(
     val native: List<SdkSummaryItemExport>,
     val components: List<SdkSummaryItemExport>
   )
 
-  private data class SdkSummaryItemExport(
+  @JsonClass(generateAdapter = true)
+  internal data class SdkSummaryItemExport(
     val key: String,
     val label: String,
     val iconName: String,
@@ -1244,7 +968,8 @@ object LcAppsExporter {
     val previewItems: List<String>
   )
 
-  private data class SdkRuleExport(
+  @JsonClass(generateAdapter = true)
+  internal data class SdkRuleExport(
     val label: String,
     val iconName: String,
     val iconUrl: String,
@@ -1255,7 +980,8 @@ object LcAppsExporter {
     val type: Int
   )
 
-  private data class AnalysisProfileExport(
+  @JsonClass(generateAdapter = true)
+  internal data class AnalysisProfileExport(
     val id: String,
     val capabilities: List<String>,
     val ruleCount: Int,
@@ -1268,17 +994,20 @@ object LcAppsExporter {
     val stats: StatsExport
   )
 
-  private data class RuntimeProfileExport(
+  @JsonClass(generateAdapter = true)
+  internal data class RuntimeProfileExport(
     val worker: Boolean,
     val decompressionStream: Boolean,
     val system: TerminalSystemExport
   )
 
-  private data class StatsExport(
+  @JsonClass(generateAdapter = true)
+  internal data class StatsExport(
     val components: Int
   )
 
-  private data class TerminalSystemExport(
+  @JsonClass(generateAdapter = true)
+  internal data class TerminalSystemExport(
     val name: String,
     val version: String,
     val sdkInt: Int,
