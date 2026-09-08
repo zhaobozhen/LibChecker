@@ -4,15 +4,10 @@ import android.content.Context
 import com.absinthe.libchecker.database.entity.LCItem
 import com.absinthe.libchecker.domain.statistics.chart.source.BaseVariableChartDataSource
 import com.absinthe.libchecker.domain.statistics.chart.source.IAndroidSDKChart
-import com.absinthe.libchecker.domain.statistics.chart.source.IntegerFormatter
 import com.absinthe.libchecker.domain.statistics.chart.source.OsVersionAxisFormatter
+import com.absinthe.libchecker.domain.statistics.chart.source.applySizeBarData
 import com.absinthe.libchecker.domain.statistics.chart.usecase.BuildApiLevelChartDataUseCase
-import com.absinthe.libchecker.utils.UiUtils
-import com.absinthe.libchecker.utils.extensions.getColorByAttr
 import info.appdev.charting.charts.BarChart
-import info.appdev.charting.data.BarData
-import info.appdev.charting.data.BarDataSet
-import info.appdev.charting.data.BarEntryFloat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -25,46 +20,12 @@ class ApiLevelChartDataSource(
 
   override suspend fun fillChartView(chartView: BarChart, onProgressUpdated: (Int) -> Unit) {
     withContext(Dispatchers.Default) {
-      val context = chartView.context ?: return@withContext
       classifiedMap.clear()
       buildApiLevelChartData(items, kind).forEach { (apiLevel, items) ->
         classifiedMap[apiLevel] = items.toMutableList()
       }
 
-      val entries = ArrayList<BarEntryFloat>()
-      var index = 0
-      classifiedMap.forEach { entry ->
-        entries.add(BarEntryFloat(index.toFloat(), entry.value.size.toFloat()))
-        index++
-      }
-
-      val dataSet = BarDataSet(entries, "").apply {
-        isDrawIcons = false
-        valueFormatter = IntegerFormatter()
-      }
-
-      val colors = ArrayList<Int>()
-      (0..classifiedMap.size).forEach { _ ->
-        colors.add(UiUtils.getRandomColor())
-      }
-
-      dataSet.setColors(colors)
-      val data = BarData(dataSet).apply {
-        setValueTextSize(10f)
-        setValueTextColor(context.getColorByAttr(com.google.android.material.R.attr.colorOnSurface))
-      }
-
-      withContext(Dispatchers.Main) {
-        chartView.apply {
-          xAxis.apply {
-            valueFormatter = OsVersionAxisFormatter(classifiedMap.map { entry -> entry.key })
-            setLabelCount(classifiedMap.size, false)
-          }
-          this.data = data
-          highlightValues(null)
-          invalidate()
-        }
-      }
+      chartView.applySizeBarData(classifiedMap.values.map { it.size }, OsVersionAxisFormatter(classifiedMap.keys.toList()))
     }
   }
 
