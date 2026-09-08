@@ -2,6 +2,7 @@ package com.absinthe.libchecker.ui.app
 
 import android.content.Context
 import android.util.AttributeSet
+import androidx.recyclerview.widget.LinearLayoutManager
 import rikka.widget.borderview.BorderRecyclerView
 
 class BottomSheetRecyclerView : BorderRecyclerView {
@@ -17,5 +18,13 @@ class BottomSheetRecyclerView : BorderRecyclerView {
   init {
     // BottomSheetBehavior discovers and coordinates its scrolling child through nested scrolling.
     isNestedScrollingEnabled = true
+  }
+
+  fun configureVerticalList() {
+    overScrollMode = OVER_SCROLL_NEVER
+    layoutManager = LinearLayoutManager(context)
+    isVerticalScrollBarEnabled = false
+    clipToPadding = false
+    clipChildren = false
   }
 }

@@ -25,7 +25,6 @@ import androidx.core.view.isGone
 import androidx.core.view.marginTop
 import androidx.core.widget.TextViewCompat
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.api.ApiManager
@@ -142,16 +141,12 @@ class LibDetailBottomSheetView(
   }
 
   private val contentView = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = FrameLayout.LayoutParams(
       FrameLayout.LayoutParams.MATCH_PARENT,
       FrameLayout.LayoutParams.WRAP_CONTENT
     )
     adapter = contentAdapter
-    overScrollMode = OVER_SCROLL_NEVER
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     addSpacingDecoration(4.dp)
   }
 

@@ -3,7 +3,6 @@ package com.absinthe.libchecker.domain.app.detail.ui.view
 import android.content.Context
 import android.view.Gravity
 import androidx.appcompat.widget.AppCompatImageView
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.model.SignatureDetailItem
 import com.absinthe.libchecker.ui.adapter.BindOnlyAdapter
@@ -27,6 +26,7 @@ class SignatureDetailBottomSheetView(context: Context) : BottomSheetScaffoldView
   }
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       LayoutParams.WRAP_CONTENT
@@ -34,12 +34,7 @@ class SignatureDetailBottomSheetView(context: Context) : BottomSheetScaffoldView
       it.topMargin = 12.dp
     }
     setPadding(16.dp, 0, 16.dp, 0)
-    overScrollMode = OVER_SCROLL_NEVER
     adapter = this@SignatureDetailBottomSheetView.adapter
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     setHasFixedSize(true)
     addSpacingDecoration(4.dp)
   }

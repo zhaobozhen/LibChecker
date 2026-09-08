@@ -1,7 +1,6 @@
 package com.absinthe.libchecker.domain.app.detail.ui.view
 
 import android.content.Context
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.model.AppBundleItem
 import com.absinthe.libchecker.ui.adapter.BindOnlyAdapter
@@ -16,16 +15,12 @@ class AppBundleBottomSheetView(context: Context) : BottomSheetScaffoldView(conte
   private val adapter = BindOnlyAdapter(::AppBundleItemView, AppBundleItemView::bind)
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       LayoutParams.WRAP_CONTENT
     )
-    overScrollMode = OVER_SCROLL_NEVER
     adapter = this@AppBundleBottomSheetView.adapter
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     setHasFixedSize(true)
     addSpacingDecoration(4.dp)
   }

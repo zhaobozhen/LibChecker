@@ -7,7 +7,6 @@ import android.text.style.ImageSpan
 import android.text.style.UnderlineSpan
 import android.view.Gravity
 import androidx.appcompat.widget.AppCompatTextView
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.constant.URLManager
 import com.absinthe.libchecker.domain.app.detail.model.AppPropItem
@@ -50,18 +49,14 @@ class AppPropsBottomSheetView(
   }
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       (resources.displayMetrics.heightPixels * APP_PROPS_LIST_HEIGHT_PERCENTAGE).toInt()
     ).also {
       it.topMargin = 24.dp
     }
-    overScrollMode = OVER_SCROLL_NEVER
     adapter = this@AppPropsBottomSheetView.adapter
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     setHasFixedSize(true)
     addSpacingDecoration(4.dp)
     paddingBottomCompat = 16.dp

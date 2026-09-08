@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.snapshot.list.model.SnapshotItemDisplayData
 import com.absinthe.libchecker.domain.snapshot.list.model.SnapshotMenuAction
@@ -50,16 +49,12 @@ class SnapshotMenuBSDView(context: Context) : BottomSheetScaffoldView(context) {
   }
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       LayoutParams.WRAP_CONTENT
     )
-    overScrollMode = OVER_SCROLL_NEVER
     adapter = this@SnapshotMenuBSDView.adapter
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     isNestedScrollingEnabled = true
   }
 

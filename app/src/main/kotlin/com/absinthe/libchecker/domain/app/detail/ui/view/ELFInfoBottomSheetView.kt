@@ -7,7 +7,6 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
-import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.model.DetailInfoItemDisplay
@@ -48,16 +47,12 @@ class ELFInfoBottomSheetView(context: Context) : BottomSheetScaffoldView(context
   private val contentAdapter = BindOnlyAdapter(::DetailInfoItemView, DetailInfoItemView::bind)
 
   private val contentView = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = FrameLayout.LayoutParams(
       FrameLayout.LayoutParams.MATCH_PARENT,
       FrameLayout.LayoutParams.WRAP_CONTENT
     )
     adapter = contentAdapter
-    overScrollMode = OVER_SCROLL_NEVER
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     addSpacingDecoration(4.dp)
   }
 

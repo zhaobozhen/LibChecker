@@ -13,7 +13,6 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.DefaultItemAnimator
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.statistics.reference.model.LibReference
@@ -132,17 +131,13 @@ class LibReferenceMenuBSDView(
   }
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       LayoutParams.WRAP_CONTENT
     )
-    overScrollMode = OVER_SCROLL_NEVER
     adapter = ConcatAdapter(demoAdapter, optionsAdapter)
-    layoutManager = LinearLayoutManager(context)
     itemAnimator = demoItemAnimator
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     isNestedScrollingEnabled = true
   }
 

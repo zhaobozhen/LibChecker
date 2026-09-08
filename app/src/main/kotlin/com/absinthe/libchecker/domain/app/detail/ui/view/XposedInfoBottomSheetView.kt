@@ -15,7 +15,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.marginEnd
 import androidx.core.view.marginStart
 import androidx.core.view.marginTop
-import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.domain.app.detail.model.XposedInfoAction
@@ -51,16 +50,12 @@ class XposedInfoBottomSheetView(context: Context) : BottomSheetScaffoldView(cont
   }
 
   private val xposedDetailContentView = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = FrameLayout.LayoutParams(
       FrameLayout.LayoutParams.MATCH_PARENT,
       FrameLayout.LayoutParams.WRAP_CONTENT
     )
     adapter = contentAdapter
-    overScrollMode = OVER_SCROLL_NEVER
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     addSpacingDecoration(4.dp)
   }
 

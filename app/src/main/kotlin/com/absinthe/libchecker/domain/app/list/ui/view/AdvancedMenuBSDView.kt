@@ -76,16 +76,12 @@ class AdvancedMenuBSDView(context: Context) : BottomSheetScaffoldView(context) {
   }
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       LayoutParams.WRAP_CONTENT
     )
-    overScrollMode = OVER_SCROLL_NEVER
     adapter = this@AdvancedMenuBSDView.adapter
-    layoutManager = LinearLayoutManager(context)
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     setPadding(0, 0, 0, 16.dp)
     isNestedScrollingEnabled = true
     setHasFixedSize(true)

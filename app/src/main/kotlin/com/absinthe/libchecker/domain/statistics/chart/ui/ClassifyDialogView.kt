@@ -4,7 +4,6 @@ import android.content.Context
 import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.view.isVisible
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.domain.app.list.model.AppListRenderState
 import com.absinthe.libchecker.domain.app.list.ui.adapter.AppAdapter
 import com.absinthe.libchecker.domain.statistics.chart.model.AndroidVersionLabelDisplayData
@@ -25,6 +24,7 @@ class ClassifyDialogView(context: Context) : BottomSheetScaffoldView(context) {
   private val adapter = AppAdapter(AppAdapter.CardMode.TRANSPARENT)
 
   private val list = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams = LayoutParams(
       LayoutParams.MATCH_PARENT,
       LayoutParams.MATCH_PARENT,
@@ -32,12 +32,7 @@ class ClassifyDialogView(context: Context) : BottomSheetScaffoldView(context) {
     ).also {
       it.topMargin = 4.dp
     }
-    layoutManager = LinearLayoutManager(context)
     adapter = this@ClassifyDialogView.adapter
-    overScrollMode = OVER_SCROLL_NEVER
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
     setHasFixedSize(true)
     FastScrollerBuilder(this).useMd2Style().build()
   }

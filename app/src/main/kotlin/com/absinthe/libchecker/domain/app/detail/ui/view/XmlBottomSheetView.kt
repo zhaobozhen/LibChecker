@@ -2,7 +2,6 @@ package com.absinthe.libchecker.domain.app.detail.ui.view
 
 import android.content.Context
 import androidx.appcompat.widget.AppCompatTextView
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.ui.adapter.BindOnlyAdapter
 import com.absinthe.libchecker.ui.app.BottomSheetRecyclerView
@@ -22,14 +21,10 @@ class XmlBottomSheetView(context: Context) : BottomSheetScaffoldView(context) {
   )
 
   private val container = BottomSheetRecyclerView(context).apply {
+    configureVerticalList()
     layoutParams =
       LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
     adapter = this@XmlBottomSheetView.adapter
-    layoutManager = LinearLayoutManager(context)
-    overScrollMode = OVER_SCROLL_NEVER
-    isVerticalScrollBarEnabled = false
-    clipToPadding = false
-    clipChildren = false
   }
 
   init {
