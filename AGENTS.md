@@ -7,7 +7,10 @@ operational, and focused on decisions that are easy to get wrong.
 
 - Investigation, review, and explicit planning requests produce findings or a
   plan. Requests to fix, implement, or apply an approved plan authorize that
-  work; continue through relevant verification without asking again.
+  work, relevant local builds/tests, and in-place debug updates for requested
+  device validation. Finish the implementation, fix failures caused by the
+  change, and verify the affected behavior without asking again. If blocked,
+  report what remains unverified and why.
 - Make reasonable assumptions for reversible implementation details. Ask only
   when missing information materially changes scope or correctness, or an
   action needs authorization not already provided in the current task.
@@ -58,10 +61,14 @@ before invoking the wrapper instead of using the POSIX inline assignment.
   (including screenshots, recordings, logs, traces, and snapshot exports).
   Never generate files in `/sdcard`, `Download`, or any other device directory.
 
-For docs-only changes, a Gradle build is usually unnecessary. For source
+For docs-only changes, use `git diff --check`; no Gradle build is needed. For source
 changes, run the narrowest command that covers the touched files plus
-`spotlessCheck` when practical. For resource, manifest, packaging, R8, flavor,
+`spotlessCheck` when practical; use `spotlessApply` only to fix formatting.
+For resource, manifest, packaging, R8, flavor,
 or release behavior changes, run the matching assemble/minify task.
+For adapters, view-state mapping, menus, navigation, visible strings, or
+performance-sensitive changes, include a focused AndroMeld smoke on an affected
+complex real-app flow when a device is available.
 Use meaningful regression checks for changed behavior; avoid tests that merely
 repeat the implementation. Once relevant checks pass, broaden or repeat them
 only for new changes, failures, or unresolved concerns.
@@ -73,8 +80,7 @@ only for new changes, failures, or unresolved concerns.
   (`compileSdk = 37`, `targetSdk = 37`, `minSdk = 24`).
 - `foss` is the default flavor. `market` adds Google/Firebase integrations.
 - Put JVM tests under `app/src/test` and device tests under
-  `app/src/androidTest`. CI does not currently run either suite, so run the
-  narrowest relevant tests locally.
+  `app/src/androidTest`. CI does not currently run either suite.
 - Version name/code come from `baseVersionName` plus git state in
   `build-logic/src/main/kotlin/Projects.kt`; build from a real git checkout.
 - CI runs workflow-script tests, `spotlessCheck`, and separate
@@ -219,35 +225,11 @@ Important `:app` boundaries:
 - Never use destructive git commands such as `git reset --hard`, `git clean`, or
   checkout-based reverts unless the user explicitly requests them.
 
-## Agent workflow
+## Working context
 
-1. Start with `git status --short`.
-2. Inspect the smallest relevant area with `rg` or `rg --files`.
-3. Read existing local patterns and trace affected callers before editing.
-   Batch independent reads; use available subagents for independent work only
-   when they save time or improve coverage. Keep dependent edits sequential.
-4. For refactors, move one cohesive vertical slice at a time. Keep package
-   moves mechanical and separate from behavior; avoid thin pass-through types
-   and generated/build-output churn.
-5. Run `spotlessApply` only when formatting needs fixing.
-6. Run the narrowest relevant validation command. If adapters, view-state
-   mapping, menus, navigation, visible strings, or performance-sensitive paths
-   changed, add a focused AndroMeld smoke on an affected complex real-app flow
-   when a device is available. Report exactly what passed, failed, or was
-   skipped.
-7. Before committing code, consider `AGENTS.md` only for durable, recurring
-   rules. Keep it compact: merge with existing bullets, replace stale guidance,
-   or delete obsolete notes before appending. Put one-off decisions and
-   low-frequency background in commit messages, issues, or Skills instead.
-
-## Compact instructions
-
-If context is compacted, preserve these facts:
-
-- Current request, exact links, and constraints such as flavor, release, R8,
-  accessibility, or copyability requirements.
-- Files read/changed, current git status, and change ownership.
-- Commands run and their pass/fail/blocker results.
-- Active build environment, including any temporary Gradle/Android homes and
-  validation flags.
-- Any unresolved decision that must not be guessed after compaction.
+- Use the sections above for the affected area; no full repository survey or
+  fixed reading sequence is required for every change.
+- For refactors, keep package moves mechanical and separate from behavior;
+  avoid thin pass-through types and generated/build-output churn.
+- Keep agent instructions limited to durable project constraints and commands.
+  Replace stale or duplicate guidance instead of accumulating task history.
